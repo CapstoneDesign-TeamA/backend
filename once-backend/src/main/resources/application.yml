@@ -8,7 +8,6 @@ spring:
     password: ${DB_PASS}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-
   jpa:
     hibernate:
       ddl-auto: update   # 개발 중엔 update, 운영은 validate 권장
