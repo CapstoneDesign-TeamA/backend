@@ -1,4 +1,4 @@
-package com.once.user.dto.domain;
+package com.once.user.domain;
 
 public class UserInterest {
     private Long id;

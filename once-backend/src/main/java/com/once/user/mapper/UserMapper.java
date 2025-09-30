@@ -1,9 +1,9 @@
-package com.once.auth.mapper;
+package com.once.user.mapper;
 
-import com.once.auth.domain.TermsAgreement;
-import com.once.auth.domain.User;
-import com.once.auth.domain.UserActivityLog;
-import com.once.auth.domain.UserInterest;
+import com.once.user.domain.TermsAgreement;
+import com.once.user.domain.User;
+import com.once.user.domain.UserActivityLog;
+import com.once.user.domain.UserInterest;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -64,14 +64,15 @@ public interface UserMapper {
     @Update("UPDATE terms_agreements SET agreed = #{agreed}, agreed_version = #{agreedVersion}, agreed_at = #{agreedAt} WHERE user_id = #{userId} AND term_type = #{termType}")
     void updateTermsAgreement(TermsAgreement agreement);
 
+
     // 활동 로그 관련
-    @Select("SELECT * FROM user_activity_logs WHERE user_id = #{userId} ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
+
+    @Select("SELECT * FROM user_activity_logs WHERE user_id = #{userId} ORDER BY created_at DESC ")
     List<UserActivityLog> findUserActivityLogs(@Param("userId") Long userId, @Param("offset") int offset, @Param("size") int size);
 
     @Select("SELECT COUNT(*) FROM user_activity_logs WHERE user_id = #{userId}")
     int countUserActivityLogs(Long userId);
 
-    // UserMapper.java 中修正 insertUserActivityLog 方法
     @Insert("INSERT INTO user_activity_logs (user_id, activity_type, description, ip_address, user_agent, created_at) " +
             "VALUES (#{user_id}, #{activity_type}, #{description}, #{ip_address}, #{user_agent}, #{created_at})")
     @Options(useGeneratedKeys = true, keyProperty = "id")

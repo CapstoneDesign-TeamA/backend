@@ -1,4 +1,4 @@
-package com.once.auth.config;
+package com.once.config;
 
 import com.once.auth.service.AuthService;
 import jakarta.servlet.FilterChain;

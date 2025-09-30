@@ -1,6 +1,5 @@
-package com.once.auth.config;
+package com.once.config;
 
-import com.once.auth.config.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -44,20 +43,20 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
 
                         // 公开访问的端点
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/users/signup").permitAll()
-                        .requestMatchers("/api/users/check-email").permitAll()
-                        .requestMatchers("/api/users/check-username").permitAll()
-                        .requestMatchers("/api/users/check-nickname").permitAll()
-                        .requestMatchers("/api/test/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/users/signup").permitAll()
+                        .requestMatchers("/users/check-email").permitAll()
+                        .requestMatchers("/users/check-username").permitAll()
+                        .requestMatchers("/users/check-nickname").permitAll()
+                        .requestMatchers("/test/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         // 需要认证的端点
-                        .requestMatchers("/api/users/me").authenticated()
-                        .requestMatchers("/api/users/profile").authenticated()
-                        .requestMatchers("/api/users/interests").authenticated()
-                        .requestMatchers("/api/users/terms").authenticated()
-                        .requestMatchers("/api/users/activity-logs").authenticated()
-                        .requestMatchers("/api/events/**").authenticated()
+                        .requestMatchers("/users/me").authenticated()
+                        .requestMatchers("/users/profile").authenticated()
+                        .requestMatchers("/users/interests").authenticated()
+                        .requestMatchers("/users/terms").authenticated()
+                        .requestMatchers("/users/activity-logs").authenticated()
+                        .requestMatchers("/events/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 // 使用 lambda 表达式替代方法引用

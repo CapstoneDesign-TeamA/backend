@@ -1,27 +1,19 @@
-package com.once.user.dto.domain;
+package com.once.user.domain;
 
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+//@Getter
+//@Setter
 public class UserActivityLog {
     private Long id;
-    @Getter
-    @Setter
     private Long user_id;
-    @Getter
-    @Setter
     private String activity_type;
-    @Getter
-    @Setter
     private String description;
-    @Getter
-    @Setter
     private String ip_address;
     private String user_agent;
-    @Setter
-    @Getter
     private LocalDateTime created_at;
 
 
@@ -35,9 +27,10 @@ public class UserActivityLog {
         this.created_at = LocalDateTime.now();
     }
 
-//    // Getters and Setters
-//    public Long getId() { return id; }
-//    public void setId(Long id) { this.id = id; }
+    // Getters and Setters
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public Long getUserId() { return user_id; }
     public void setUserId(Long user_id) { this.user_id = user_id; }
@@ -52,4 +45,8 @@ public class UserActivityLog {
 
     public void setCreatedAt(LocalDateTime created_at) { this.created_at = created_at; }
     public LocalDateTime getcreatedAt(LocalDateTime created_at) { return created_at; }
+
+    public String getDescription() { return description; }
+
+    public void setDescription(String description) { this.description = description;}
 }

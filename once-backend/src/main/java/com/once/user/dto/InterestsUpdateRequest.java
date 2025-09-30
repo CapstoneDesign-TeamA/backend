@@ -1,4 +1,4 @@
-package com.once.auth.dto;
+package com.once.user.dto;
 
 import jakarta.validation.constraints.NotEmpty;
 

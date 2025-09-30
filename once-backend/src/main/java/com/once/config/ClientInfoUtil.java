@@ -1,4 +1,4 @@
-package com.once.auth.config;
+package com.once.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;

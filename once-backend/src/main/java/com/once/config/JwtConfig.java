@@ -1,7 +1,5 @@
-package com.once.auth.config; // 确保包路径正确
+package com.once.config; // 确保包路径正确
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 

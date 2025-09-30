@@ -1,29 +1,28 @@
-package com.once.auth.controller;
+package com.once.user.controller;
 
-import com.once.auth.dto.InterestsUpdateRequest;
-import com.once.auth.dto.ProfileUpdateRequest;
-import com.once.auth.mapper.UserMapper;
-import com.once.auth.domain.TermsAgreement;
-import com.once.auth.domain.UserActivityLog;
-import com.once.auth.domain.UserInterest;
+import com.once.user.dto.InterestsUpdateRequest;
+import com.once.user.dto.ProfileUpdateRequest;
+import com.once.user.mapper.UserMapper;
+import com.once.user.domain.TermsAgreement;
+import com.once.user.domain.UserActivityLog;
+import com.once.user.domain.UserInterest;
 import com.once.auth.service.AuthService;
 import jakarta.validation.Valid;
 import com.once.auth.dto.SignupRequest;
-import com.once.auth.domain.User;
-import com.once.auth.service.UserService;
+import com.once.user.domain.User;
+import com.once.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.constraints.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @CrossOrigin(origins = "*")
 public class UserController {
 
@@ -65,6 +64,9 @@ public class UserController {
         // 사용자 생성
         User user = userService.createUser(signupRequest);
 
+        // 활동 로그 기록
+        userService.logUserActivity(user.getId(), "/signup", "사용자 생성");
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "회원가입 완료");
         return ResponseEntity.ok(response);
@@ -85,7 +87,7 @@ public class UserController {
             userService.deactivateUser(user.getId());
 
             // 활동 로그 기록
-            userService.logUserActivity(user.getId(), "ACCOUNT_DEACTIVATION", "회원 탈퇴");
+            userService.logUserActivity(user.getId(), "/user/me", "회원 탈퇴");
 
             return ResponseEntity.ok(Map.of("success", true, "message", "회원 탈퇴 완료"));
 
@@ -195,7 +197,7 @@ public class UserController {
             }
 
             // 활동 로그 기록
-            userService.logUserActivity(user.getId(), "PROFILE_UPDATE", "프로필 정보 수정");
+            userService.logUserActivity(user.getId(), "/user.profile", "프로필 정보 수정");
 
             return ResponseEntity.ok(Map.of("success", true, "message", "프로필 수정 완료"));
 
@@ -254,7 +256,7 @@ public class UserController {
             }
 
             // 활동 로그 기록
-            userService.logUserActivity(user.getId(), "INTERESTS_UPDATE", "관심사 수정");
+            userService.logUserActivity(user.getId(), "/user/interests", "관심사 수정");
 
             return ResponseEntity.ok(Map.of("success", true, "message", "관심사 수정 완료"));
 
@@ -286,7 +288,7 @@ public class UserController {
     @GetMapping("/activity-logs")
     public ResponseEntity<?> getUserActivityLogs(
             @RequestHeader("Authorization") String token,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         try {

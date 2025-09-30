@@ -1,12 +1,12 @@
-package com.once.auth.service;
+package com.once.user.service;
 
 import ch.qos.logback.classic.Logger;
 import com.once.config.ClientInfoUtil;
 import com.once.auth.dto.SignupRequest;
-import com.once.auth.mapper.UserMapper;
-import com.once.auth.domain.TermsAgreement;
-import com.once.auth.domain.User;
-import com.once.auth.domain.UserActivityLog;
+import com.once.user.mapper.UserMapper;
+import com.once.user.domain.TermsAgreement;
+import com.once.user.domain.User;
+import com.once.user.domain.UserActivityLog;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -108,6 +108,8 @@ public class UserService {
         try {
             String ipAddress = ClientInfoUtil.getClientIpAddress();
             String userAgent = ClientInfoUtil.getClientUserAgent();
+
+
             UserActivityLog log = new UserActivityLog();
             log.setUserId(user_id);
             log.setActivityType(activity_type);
@@ -116,9 +118,6 @@ public class UserService {
             log.setUserAgent(userAgent);
             log.setCreatedAt(LocalDateTime.now());
 
-            // 可选：设置 IP 地址和 User-Agent（如果需要）
-            // log.setIpAddress("获取客户端IP");
-            // log.setUserAgent("获取User-Agent");
 
             userMapper.insertUserActivityLog(log);
             logger.info("활동 로그 기록 완료: 사용자 ID={}, 활동 유형={}", user_id, activity_type);
