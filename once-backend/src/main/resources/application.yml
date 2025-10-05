@@ -3,9 +3,9 @@ spring:
     name: once-backend
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASS}
+    url: jdbc:mysql://40.233.98.156:3306/once?sslMode=DISABLED&allowPublicKeyRetrieval=true&characterEncoding=utf8&serverTimezone=UTC
+    username: jin
+    password: rlawlsals2026016
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:

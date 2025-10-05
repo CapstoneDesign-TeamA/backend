@@ -1,0 +1,22 @@
+package com.once.group.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class GroupResponse {
+    private Long groupId;          // 그룹 ID
+    private String name;           // 그룹명
+    private String description;    // 그룹 설명
+    private String imageUrl;       // 대표 이미지
+    private LocalDateTime createdAt; // 생성 시간
+
+}
+
