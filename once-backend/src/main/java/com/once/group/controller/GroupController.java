@@ -17,80 +17,136 @@ public class GroupController {
 
     private final GroupService groupService;
 
-    // 그룹 생성 API
-    @PostMapping("/create")
-    public ResponseEntity<GroupResponse> createGroup(@RequestBody GroupCreateRequest request) {
+    // 그룹 생성
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> createGroup(@RequestBody GroupCreateRequest request) {
         GroupResponse response = groupService.createGroup(request);
-        return ResponseEntity.ok(response);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("groupId", response.getGroupId());
+        data.put("name", response.getName());
+        data.put("createdAt", response.getCreatedAt());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "그룹이 생성되었습니다.");
+        result.put("data", data);
+
+        return ResponseEntity.ok(result);
     }
 
+    // 내 그룹 목록 조회
     @GetMapping("/my")
-    public ResponseEntity<List<GroupResponse>> getMyGroups() {
-        List<GroupResponse> response = groupService.getMyGroups();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> getMyGroups() {
+        List<GroupSummaryResponse> groups = groupService.getMyGroupsSummary();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", groups);
+        return ResponseEntity.ok(result);
     }
 
+
+    // 그룹 상세 조회
     @GetMapping("/{groupId}")
-    public ResponseEntity<GroupResponse> getGroupById(@PathVariable Long groupId) {
-        return ResponseEntity.ok(groupService.getGroupById(groupId));
+    public ResponseEntity<Map<String, Object>> getGroupById(@PathVariable Long groupId) {
+        GroupDetailResponse detail = groupService.getGroupDetail(groupId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", detail);
+        return ResponseEntity.ok(result);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<GroupResponse> updateGroup(
-            @PathVariable Long id,
+    // 그룹 수정
+    @PutMapping("/{groupId}")
+    public ResponseEntity<Map<String, Object>> updateGroup(
+            @PathVariable Long groupId,
             @RequestBody GroupCreateRequest request) {
-        GroupResponse updatedGroup = groupService.updateGroup(id, request);
-        return ResponseEntity.ok(updatedGroup);
+        GroupResponse response = groupService.updateGroup(groupId, request);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "그룹 정보가 수정되었습니다.");
+        result.put("data", response);
+
+        return ResponseEntity.ok(result);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteGroup(@PathVariable Long id) {
-        groupService.deleteGroup(id);
-        return ResponseEntity.ok("그룹이 성공적으로 삭제되었습니다.");
+    // 그룹 삭제
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<Map<String, Object>> deleteGroup(@PathVariable Long groupId) {
+        groupService.deleteGroup(groupId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "그룹이 삭제되었습니다.");
+        result.put("data", null);
+
+        return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/{groupId}/invite")
-    public ResponseEntity<GroupInviteResponse> inviteMember(
+    // 그룹 초대
+    @PostMapping("/{groupId}/invites")
+    public ResponseEntity<Map<String, Object>> inviteMember(
             @PathVariable Long groupId,
             @RequestBody GroupInviteRequest request) {
-
-        // URL의 groupId를 DTO에 설정
         request.setGroupId(groupId);
-
         GroupInviteResponse response = groupService.inviteMember(request);
-        return ResponseEntity.ok(response);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "그룹 초대 완료");
+        result.put("data", response);
+
+        return ResponseEntity.ok(result);
     }
 
+    // 일정 등록
     @PostMapping("/{groupId}/schedules")
-    public ResponseEntity<ScheduleResponse> createSchedule(
+    public ResponseEntity<Map<String, Object>> createSchedule(
             @PathVariable Long groupId,
             @RequestBody ScheduleCreateRequest request) {
         ScheduleResponse response = groupService.createSchedule(groupId, request);
-        return ResponseEntity.ok(response);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "일정이 등록되었습니다.");
+        result.put("data", response);
+
+        return ResponseEntity.ok(result);
     }
 
+    // 일정 조회
     @GetMapping("/{groupId}/schedules")
-    public ResponseEntity<List<ScheduleResponse>> getSchedulesByGroup(@PathVariable Long groupId) {
+    public ResponseEntity<Map<String, Object>> getSchedulesByGroup(@PathVariable Long groupId) {
         List<ScheduleResponse> schedules = groupService.getSchedulesByGroup(groupId);
-        return ResponseEntity.ok(schedules);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", schedules);
+
+        return ResponseEntity.ok(result);
     }
 
+    // 일정 수정
     @PutMapping("/{groupId}/schedules/{scheduleId}")
-    public ResponseEntity<ScheduleResponse> updateSchedule(
+    public ResponseEntity<Map<String, Object>> updateSchedule(
             @PathVariable Long groupId,
             @PathVariable Long scheduleId,
             @RequestBody ScheduleCreateRequest request) {
         ScheduleResponse response = groupService.updateSchedule(groupId, scheduleId, request);
-        return ResponseEntity.ok(response);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "일정이 수정되었습니다.");
+        result.put("data", response);
+
+        return ResponseEntity.ok(result);
     }
 
+    // 일정 삭제
     @DeleteMapping("/{groupId}/schedules/{scheduleId}")
-    public ResponseEntity<Map<String, String>> deleteSchedule(
+    public ResponseEntity<Map<String, Object>> deleteSchedule(
             @PathVariable Long groupId,
             @PathVariable Long scheduleId) {
         groupService.deleteSchedule(groupId, scheduleId);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "일정이 삭제되었습니다.");
-        return ResponseEntity.ok(response);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "일정이 삭제되었습니다.");
+        result.put("data", null);
+
+        return ResponseEntity.ok(result);
     }
 }

@@ -33,7 +33,7 @@ public class GroupService {
         return toResponse(saved); // 공통 매퍼 사용
     }
 
-    // 내 그룹 조회
+    // 내 그룹 조회  임시용
     public List<GroupResponse> getMyGroups() {
         return groupRepository.findAll()
                 .stream()
@@ -41,12 +41,59 @@ public class GroupService {
                 .collect(Collectors.toList());
     }
 
-    // 그룹 상세 보기
+    // 내 그룹 조회
+    public List<GroupSummaryResponse> getMyGroupsSummary() {
+        List<Group> groups = groupRepository.findAll(); // 실제로는 사용자 기준 필터 필요
+
+        return groups.stream().map(group -> {
+            GroupSummaryResponse dto = new GroupSummaryResponse();
+            dto.setGroupId(group.getId());
+            dto.setName(group.getName());
+            dto.setMemberCount(5); // 임시값, 이후 Member 테이블 연동 시 변경
+            dto.setLastActive("2025-09-26"); // 예시, 추후 변경
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    // 그룹 상세 보기  임시용
     public GroupResponse getGroupById(Long groupId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("그룹을 찾을 수 없습니다. ID: " + groupId));
         return toResponse(group); // 공통 매퍼 사용
     }
+
+    // 그룹 상세 보기
+    public GroupDetailResponse getGroupDetail(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
+
+        GroupDetailResponse dto = new GroupDetailResponse();
+        dto.setGroupId(group.getId());
+        dto.setName(group.getName());
+
+        // 구성원 (추후 Member 테이블 연동 예정)
+        dto.setMembers(List.of("A", "B", "C"));
+
+        // 일정 (이미 ScheduleRepository 있음)
+        List<ScheduleResponse> schedules = scheduleRepository.findByGroupId(groupId)
+                .stream().map(schedule -> {
+                    ScheduleResponse s = new ScheduleResponse();
+                    s.setScheduleId(schedule.getId());
+                    s.setTitle(schedule.getTitle());
+                    s.setDate(schedule.getDate().toString());
+                    s.setTime(schedule.getTime().toString());
+                    s.setDescription(schedule.getDescription());
+                    s.setCreatedAt(schedule.getCreatedAt());
+                    return s;
+                }).collect(Collectors.toList());
+        dto.setSchedules(schedules);
+
+        // 앨범 목록 (현재 미구현이므로 임시 데이터)
+        dto.setAlbums(List.of("https://example.com/album1.jpg", "https://example.com/album2.jpg"));
+
+        return dto;
+    }
+
 
     // 그룹 수정
     public GroupResponse updateGroup(Long id, GroupCreateRequest request) {
@@ -95,27 +142,18 @@ public class GroupService {
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
 
         Schedule schedule = new Schedule();
-
+        schedule.setGroup(group);
         schedule.setTitle(request.getTitle());
         schedule.setDate(LocalDate.parse(request.getDate()));
-
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         schedule.setTime(LocalTime.parse(request.getTime(), timeFormatter));
         schedule.setDescription(request.getDescription());
 
-        // group_id를 직접 매핑 (DB 외래키 문제 우회)
-        schedule.setGroup(group); // 유지
-        try {
-            var groupField = schedule.getClass().getDeclaredField("group");
-            groupField.setAccessible(true);
-            groupField.set(schedule, group);
-        } catch (Exception ignored) {}
-
         Schedule saved = scheduleRepository.save(schedule);
 
         ScheduleResponse response = new ScheduleResponse();
-        response.setId(saved.getId());
-        response.setGroupId(group.getId());
+        response.setScheduleId(saved.getId());
+        response.setGroupId(groupId);
         response.setTitle(saved.getTitle());
         response.setDate(saved.getDate().toString());
         response.setTime(saved.getTime().toString());
@@ -134,7 +172,7 @@ public class GroupService {
 
         return schedules.stream().map(schedule -> {
             ScheduleResponse response = new ScheduleResponse();
-            response.setId(schedule.getId());
+            response.setScheduleId(schedule.getId());
             response.setGroupId(groupId);
             response.setTitle(schedule.getTitle());
             response.setDate(schedule.getDate().toString());
@@ -170,7 +208,7 @@ public class GroupService {
         Schedule updated = scheduleRepository.save(schedule);
 
         ScheduleResponse response = new ScheduleResponse();
-        response.setId(updated.getId());
+        response.setScheduleId(updated.getId());
         response.setGroupId(groupId);
         response.setTitle(updated.getTitle());
         response.setDate(updated.getDate().toString());

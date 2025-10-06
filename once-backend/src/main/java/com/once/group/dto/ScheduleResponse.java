@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class ScheduleResponse {
-    private Long id;
+    private Long scheduleId;
     private Long groupId;
     private String title;
     private String date;
