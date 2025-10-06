@@ -24,7 +24,7 @@ public class GroupController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/list")
+    @GetMapping("/my")
     public ResponseEntity<List<GroupResponse>> getMyGroups() {
         List<GroupResponse> response = groupService.getMyGroups();
         return ResponseEntity.ok(response);
