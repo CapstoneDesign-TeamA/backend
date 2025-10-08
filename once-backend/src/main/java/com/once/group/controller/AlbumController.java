@@ -3,6 +3,7 @@ package com.once.group.controller;
 import com.once.group.dto.AlbumCreateRequest;
 import com.once.group.dto.AlbumResponse;
 import com.once.group.service.AlbumService;
+import com.once.group.service.AutoAlbumService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class AlbumController {
 
     private final AlbumService albumService;
+    private final AutoAlbumService autoAlbumService;
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createAlbum(
@@ -73,4 +75,24 @@ public class AlbumController {
 
         return ResponseEntity.ok(result);
     }
+
+    // 모임 종료 후 자동 앨범 생성
+    @PostMapping("/auto")
+    public ResponseEntity<Map<String, Object>> createAutoAlbum(
+            @PathVariable Long groupId,
+            @RequestBody Map<String, Long> request) {
+
+        Long meetingId = request.get("meetingId");
+        AlbumResponse album = autoAlbumService.createAutoAlbum(groupId, meetingId);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("albumId", album.getAlbumId());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "모임 종료 후 앨범이 자동 생성되었습니다.");
+        result.put("data", data);
+
+        return ResponseEntity.ok(result);
+    }
+
 }
