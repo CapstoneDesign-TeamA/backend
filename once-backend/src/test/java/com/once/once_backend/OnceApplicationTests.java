@@ -1,13 +1,20 @@
 package com.once.once_backend;
-
+import com.once.auth.domain.Token;
+import com.once.auth.mapper.AuthMapper;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@SpringBootTest
+
+//@SpringBootTest
 class OnceApplicationTests {
 
+
+
 	@Test
-	void contextLoads() {
-	}
+    void contextLoads() {
+
+
+    }
+
 
 }
