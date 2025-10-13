@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor
-public class Schedule {
+public class CalendarSchedule {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

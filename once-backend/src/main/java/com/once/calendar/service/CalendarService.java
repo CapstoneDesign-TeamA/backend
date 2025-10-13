@@ -1,14 +1,12 @@
 package com.once.calendar.service;
 
 import com.once.calendar.dto.ScheduleDto.*;
-import com.once.calendar.repository.ScheduleRepository;
+import com.once.calendar.repository.CalendarScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -16,7 +14,7 @@ import java.util.List;
 @Transactional(readOnly = true) // 기본적으로 읽기 전용 트랜잭션
 public class CalendarService {
 
-    private final ScheduleRepository scheduleRepository;
+    private final CalendarScheduleRepository scheduleRepository;
 
     @Transactional // 쓰기 작업에는 별도 어노테이션 추가
     public ScheduleCreateResponse createSchedule(ScheduleCreateRequest request) {

@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/groups")
-public class GroupController {
+public class CalendarGroupController {
 
     // 그룹 관련 로직이 많아지면 별도의 GroupService를 만드는 것이 좋습니다.
     // 여기서는 CalendarService를 그대로 사용합니다.
