@@ -21,7 +21,7 @@ public class GroupService {
     // 그룹원 free / busy 조회
     public GroupFreeBusyResponse getGroupFreeBusy(Long groupId, LocalDate startDate, LocalDate endDate) {
 
-        // 1. 그룹에 속한 모든 멤버의 userId 목록 조회
+        // 1. 그룹에 속한 모든 멤버의 userId 목록 조회ㅣ
         // List<Long> memberUserIds = groupMemberRepository.findUserIdsByGroupId(groupId);
         List<Long> memberUserIds = List.of(1L, 2L, 3L); // 임시 데이터
 
