@@ -35,8 +35,8 @@ public class GroupService {
 
         // 4. 조회된 일정을 바탕으로 Busy 시간대 목록(Time Blocks) 생성
         // todo Interval Merging 알고리즘 구현
-        //       - 모든 일정을 (start, end) 시간 블록으로 변환
-        //       - 겹치는 시간대를 병합하여 최종 'Busy' 시간대 목록 생성
+        // - 모든 일정을 (start, end) 시간 블록으로 변환
+        // - 겹치는 시간대를 병합하여 최종 'Busy' 시간대 목록 생성
         List<AvailableSlot> busySlots = mergeIntervals(allSchedules);
 
         // 5. Busy 시간대를 반전시켜 Free 시간대(availableSlots) 계산
@@ -76,7 +76,7 @@ public class GroupService {
     private List<AvailableSlot> mergeIntervals(List<Schedule> schedules) {
         // todo interval merging
         // 1. 스케줄을 시작 시간 기준으로 정렬
-        // 2. 순회하면서 겹치는 시간 병합 (merge)
+        // 2. 순회하면서 겹치는 시간 병합
         return new ArrayList<>();  // 임시
     }
 

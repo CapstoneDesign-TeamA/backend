@@ -23,7 +23,6 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    // 通过构造函数注入
     @Autowired
     public SecurityConfig(@Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
@@ -36,21 +35,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) // CSRF 비활성화
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authz -> authz
-
-                        // 公开访问的端点
+                .authorizeHttpRequests(auth -> auth
+                        // 공개 엔드포인트
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/users/signup").permitAll()
                         .requestMatchers("/users/check-email").permitAll()
                         .requestMatchers("/users/check-username").permitAll()
                         .requestMatchers("/users/check-nickname").permitAll()
                         .requestMatchers("/test/**").permitAll()
+                        .requestMatchers("/group/**").permitAll() // 그룹 기능 임시 공개
                         .requestMatchers("/error").permitAll()
-                        // 需要认证的端点
+
+                        // 인증 필요한 엔드포인트
                         .requestMatchers("/users/me").authenticated()
                         .requestMatchers("/users/profile").authenticated()
                         .requestMatchers("/users/interests").authenticated()
@@ -59,7 +60,6 @@ public class SecurityConfig {
                         .requestMatchers("/events/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                // 使用 lambda 表达式替代方法引用
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
