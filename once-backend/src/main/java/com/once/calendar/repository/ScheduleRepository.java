@@ -2,6 +2,8 @@ package com.once.calendar.repository;
 
 import com.once.calendar.domain.Schedule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -10,7 +12,32 @@ import java.util.List;
 @Repository
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
-    // 특정 기간 사이의 일정을 조회하는 쿼리 메서드 (예시)
-    // JPQL을 사용하거나 QueryDSL로 더 복잡한 쿼리 작성 가능
-    List<Schedule> findAllByStartDateTimeBetween(LocalDateTime start, LocalDateTime end);
+    /*
+    내가 생성한 개인 일정 (userId = userId and type = 'PERSONAL' 과
+    내가 속한 그룹의 모든 일정 (groupId IN:groupIds)
+    을 기간 (start ~ end) 내에서 모두 조회
+     */
+
+    @Query("SELECT s FROM Schedule s WHERE " +
+            "((s.userId = :userId AND s.type = 'PERSONAL') OR (s.groupId IN :groupIds)) " +
+            "AND (s.startDateTime < :end AND s.endDateTime > :start)")
+    List<Schedule> findPersonalAndGroupSchedules(
+            @Param("userId") Long userId,
+            @Param("groupIds") List<Long> groupIds,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    /*
+    그룹 멤버 일정 Free / Busy 분석
+    특정 기간 내에 여러 명의 사용자가 속한 모든 일정(개인 + 그룹) 조회
+     */
+    @Query("SELECT s FROM Schedule s WHERE " +
+           "(s.userId IN:memberUserIds OR s.groupId IN :groupIds) " +
+            "AND (s.startDateTime < :end AND s.endDateTime > :start)")
+    List<Schedule> findAllSchedulesForGroupMembers(
+            @Param("memberUserIds") List<Long> memberUserIds,
+            @Param("groupIds") List<Long> groupIds,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
 }
