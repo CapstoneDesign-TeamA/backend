@@ -34,7 +34,7 @@ public class GroupService {
         List<Schedule> allSchedules = scheduleRepository.findAllSchedulesForGroupMembers(memberUserIds, groupIds, start, end);
 
         // 4. 조회된 일정을 바탕으로 Busy 시간대 목록(Time Blocks) 생성
-        // TODO: (중요) Interval Merging 알고리즘 구현 필요
+        // todo Interval Merging 알고리즘 구현
         //       - 모든 일정을 (start, end) 시간 블록으로 변환
         //       - 겹치는 시간대를 병합하여 최종 'Busy' 시간대 목록 생성
         List<AvailableSlot> busySlots = mergeIntervals(allSchedules);
