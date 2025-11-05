@@ -61,7 +61,7 @@ public class CalendarService {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
-        // todo 일정 수정 권한 확인
+        // todo 일정 수정 권한 확인 (본인이 생성한 일정만 수정 가능한지)
         /*
         if (!schedule.getUserId().equals(userId)) {
             throw new SecurityException("수정 권한이 없습니다.");
