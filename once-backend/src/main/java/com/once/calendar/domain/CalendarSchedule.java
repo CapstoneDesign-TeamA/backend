@@ -1,6 +1,7 @@
 package com.once.calendar.domain;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
@@ -14,8 +15,17 @@ public class CalendarSchedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long scheduleId;
 
+    // 일정 생성자의 id
+    @Column(nullable = false)
+    private Long userId;
+
+    // 일정이 속한 그룹 id
+    private Long groupId;
+
     @Column(nullable = false)
     private String title;
+
+    @Column(length = 200)
     private String memo;
 
     @Column(nullable = false)
@@ -25,17 +35,26 @@ public class CalendarSchedule {
     private LocalDateTime endDateTime;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ScheduleType type; // PERSONAL, GROUP 등
 
-    // 그룹 ID는 Group 엔티티와 연관관계를 맺는 것이 일반적입니다.
-    // 예시: @ManyToOne private Group group;
-    private Long groupId;
 
-    // 생성자, 빌더 등 필요에 따라 추가
-}
+    @Builder
+    public Schedule(Long userId, Long groupId, String title, String memo, LocalDateTime startDateTime, LocalDateTime endDateTime, ScheduleType type) {
+        this.userId = userId;
+        this.groupId = groupId;
+        this.title = title;
+        this.memo = memo;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
+        this.type = type;
+    }
 
-// 일정을 구분하기 위한 Enum 타입
-enum ScheduleType {
-    PERSONAL,
-    GROUP
+    // 일정 수정을 위한 메서드
+    public void update(String title, String memo, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        this.title = title;
+        this.memo = memo;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
+    }
 }
