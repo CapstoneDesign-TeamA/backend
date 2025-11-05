@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/groups")
-public class GroupController {
+public class CalendarGroupController {
 
     private final GroupService groupService;
 
