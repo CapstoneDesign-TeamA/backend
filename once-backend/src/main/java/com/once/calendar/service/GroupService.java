@@ -1,8 +1,8 @@
 package com.once.calendar.service;
 
-import com.once.calendar.domain.Schedule;
+import com.once.calendar.domain.CalendarSchedule;
 import com.once.calendar.dto.ScheduleDto.*;
-import com.once.calendar.repository.ScheduleRepository;
+import com.once.calendar.repository.CalendarScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,11 +11,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
+@Service("calendarGroupService")  // 임시
 @RequiredArgsConstructor
 public class GroupService {
 
-    private final ScheduleRepository scheduleRepository;
+    private final CalendarScheduleRepository scheduleRepository;
     // private final GroupMemberRepository groupMemberRepository; // 그룹 멤버 조회를 위함
 
     // 그룹원 free / busy 조회
@@ -31,7 +31,7 @@ public class GroupService {
         // 3. 멤버들의 모든 일정(개인+그룹)을 기간 내에서 조회
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(23, 59, 59);
-        List<Schedule> allSchedules = scheduleRepository.findAllSchedulesForGroupMembers(memberUserIds, groupIds, start, end);
+        List<CalendarSchedule> allSchedules = scheduleRepository.findAllSchedulesForGroupMembers(memberUserIds, groupIds, start, end);
 
         // 4. 조회된 일정을 바탕으로 Busy 시간대 목록(Time Blocks) 생성
         // todo Interval Merging 알고리즘 구현
@@ -73,7 +73,7 @@ public class GroupService {
         return new UnavailableWeeksResponse(weeks);
     }
 
-    private List<AvailableSlot> mergeIntervals(List<Schedule> schedules) {
+    private List<AvailableSlot> mergeIntervals(List<CalendarSchedule> schedules) {
         // todo interval merging
         // 1. 스케줄을 시작 시간 기준으로 정렬
         // 2. 순회하면서 겹치는 시간 병합

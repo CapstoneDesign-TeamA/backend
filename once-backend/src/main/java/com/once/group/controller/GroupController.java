@@ -1,11 +1,14 @@
 package com.once.group.controller;
 
+import com.once.common.service.ImageUploadService;
 import com.once.group.dto.*;
 import com.once.group.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,11 +19,17 @@ import java.util.Map;
 public class GroupController {
 
     private final GroupService groupService;
+    private final ImageUploadService imageUploadService;
 
     // 그룹 생성
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createGroup(@RequestBody GroupCreateRequest request) {
-        GroupResponse response = groupService.createGroup(request);
+    public ResponseEntity<Map<String, Object>> createGroup(
+            @RequestPart("name") String name,
+            @RequestPart("description") String description,
+            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+
+        String imageUrl = imageUploadService.uploadImage(file);
+        GroupResponse response = groupService.createGroup(name, description, imageUrl);
 
         Map<String, Object> data = new HashMap<>();
         data.put("groupId", response.getGroupId());
@@ -30,7 +39,6 @@ public class GroupController {
         Map<String, Object> result = new HashMap<>();
         result.put("message", "그룹이 생성되었습니다.");
         result.put("data", data);
-
         return ResponseEntity.ok(result);
     }
 
@@ -59,13 +67,16 @@ public class GroupController {
     @PutMapping("/{groupId}")
     public ResponseEntity<Map<String, Object>> updateGroup(
             @PathVariable Long groupId,
-            @RequestBody GroupCreateRequest request) {
-        GroupResponse response = groupService.updateGroup(groupId, request);
+            @RequestPart("name") String name,
+            @RequestPart("description") String description,
+            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+
+        String imageUrl = imageUploadService.uploadImage(file);
+        GroupResponse response = groupService.updateGroup(groupId, name, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "그룹 정보가 수정되었습니다.");
         result.put("data", response);
-
         return ResponseEntity.ok(result);
     }
 

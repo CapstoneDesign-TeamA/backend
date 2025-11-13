@@ -1,9 +1,9 @@
 package com.once.calendar.service;
 
-import com.once.calendar.domain.Schedule;
+import com.once.calendar.domain.CalendarSchedule;
 import com.once.calendar.domain.ScheduleType;
 import com.once.calendar.dto.ScheduleDto.*;
-import com.once.calendar.repository.ScheduleRepository;
+import com.once.calendar.repository.CalendarScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +18,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class CalendarService {
 
-    private final ScheduleRepository scheduleRepository;
+    private final CalendarScheduleRepository scheduleRepository;
     // private final GroupMemberService groupMemberService; // 내가 속한 그룹 ID 목록을 가져오기 위함
     // private final GroupRepository groupRepository; // 그룹 이름 등을 가져오기 위함
 
@@ -40,7 +40,7 @@ public class CalendarService {
 
         ScheduleType type = (request.getGroupId() == null) ? ScheduleType.PERSONAL : ScheduleType.GROUP;
 
-        Schedule schedule = Schedule.builder()
+        CalendarSchedule schedule = CalendarSchedule.builder()
                 .userId(userId)
                 .groupId(request.getGroupId())
                 .title(request.getTitle())
@@ -50,7 +50,7 @@ public class CalendarService {
                 .type(type)
                 .build();
 
-        Schedule savedSchedule = scheduleRepository.save(schedule);
+        CalendarSchedule savedSchedule = scheduleRepository.save(schedule);
 
         return new ScheduleCreateResponse(savedSchedule.getScheduleId(), "일정이 성공적으로 등록되었습니다.");
     }
@@ -58,7 +58,7 @@ public class CalendarService {
     @Transactional
     public ScheduleUpdateResponse updateSchedule(Long scheduleId, ScheduleUpdateRequest request) {
         Long userId = getUserIdFromAuth();
-        Schedule schedule = scheduleRepository.findById(scheduleId)
+        CalendarSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
         // todo 일정 수정 권한 확인 (본인이 생성한 일정만 수정 가능한지)
@@ -76,7 +76,7 @@ public class CalendarService {
     @Transactional
     public void deleteSchedule(Long scheduleId) {
         Long userId = getUserIdFromAuth();
-        Schedule schedule = scheduleRepository.findById(scheduleId)
+        CalendarSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
         // todo 일정 삭제 권한 확인
@@ -98,7 +98,7 @@ public class CalendarService {
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
 
-        List<Schedule> schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
+        List<CalendarSchedule> schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
 
         List<ScheduleInfo> scheduleInfos = schedules.stream()
                 .map(s -> new ScheduleInfo(
@@ -122,7 +122,7 @@ public class CalendarService {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.atTime(23, 59, 59);
 
-        List<Schedule> schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
+        List<CalendarSchedule> schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
 
         List<DailyScheduleInfo> scheduleInfos = schedules.stream()
                 .map(s -> new DailyScheduleInfo(
@@ -138,7 +138,7 @@ public class CalendarService {
 
     public ScheduleDetailResponse getScheduleDetails(Long scheduleId) {
         Long userId = getUserIdFromAuth();
-        Schedule schedule = scheduleRepository.findById(scheduleId)
+        CalendarSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
         // todo 일정 조회 권한 확인 (내가 속한 그룹의 일정이거나 내 일정인지)
