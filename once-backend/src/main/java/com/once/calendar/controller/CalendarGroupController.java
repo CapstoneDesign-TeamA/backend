@@ -1,7 +1,7 @@
 package com.once.calendar.controller;
 
 import com.once.calendar.dto.ScheduleDto.*;
-import com.once.calendar.service.CalendarService;
+import com.once.calendar.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -13,9 +13,7 @@ import java.time.LocalDate;
 @RequestMapping("/groups")
 public class CalendarGroupController {
 
-    // 그룹 관련 로직이 많아지면 별도의 GroupService를 만드는 것이 좋습니다.
-    // 여기서는 CalendarService를 그대로 사용합니다.
-    private final CalendarService calendarService;
+    private final GroupService groupService;
 
     // 그룹원 Free/Busy 조회
     @GetMapping("/{groupId}/freebusy")
@@ -24,7 +22,7 @@ public class CalendarGroupController {
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
 
-        GroupFreeBusyResponse response = calendarService.getGroupFreeBusy(groupId, startDate, endDate);
+        GroupFreeBusyResponse response = groupService.getGroupFreeBusy(groupId, startDate, endDate);
         return ResponseEntity.ok(response);
     }
 
@@ -35,7 +33,7 @@ public class CalendarGroupController {
             @RequestParam int year,
             @RequestParam int month) {
 
-        UnavailableWeeksResponse response = calendarService.getUnavailableWeeks(groupId, year, month);
+        UnavailableWeeksResponse response = groupService.getUnavailableWeeks(groupId, year, month);
         return ResponseEntity.ok(response);
     }
 }
