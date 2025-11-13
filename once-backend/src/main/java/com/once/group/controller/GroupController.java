@@ -4,6 +4,7 @@ import com.once.common.service.ImageUploadService;
 import com.once.group.dto.*;
 import com.once.group.service.GroupService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,13 +23,22 @@ public class GroupController {
     private final ImageUploadService imageUploadService;
 
     // 그룹 생성
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> createGroup(
-            @RequestPart("name") String name,
-            @RequestPart("description") String description,
-            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+            @RequestParam("name") String name,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) throws IOException {
 
-        String imageUrl = imageUploadService.uploadImage(file);
+        if (description == null) {
+            description = "";
+        }
+
+        String imageUrl = null;
+        if (file != null && !file.isEmpty()) {
+            imageUrl = imageUploadService.uploadImage(file);
+        }
+
         GroupResponse response = groupService.createGroup(name, description, imageUrl);
 
         Map<String, Object> data = new HashMap<>();
@@ -64,14 +74,23 @@ public class GroupController {
     }
 
     // 그룹 수정
-    @PutMapping("/{groupId}")
+    @PutMapping(value = "/{groupId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateGroup(
             @PathVariable Long groupId,
-            @RequestPart("name") String name,
-            @RequestPart("description") String description,
-            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+            @RequestParam("name") String name,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) throws IOException {
 
-        String imageUrl = imageUploadService.uploadImage(file);
+        if (description == null) {
+            description = "";
+        }
+
+        String imageUrl = null;
+        if (file != null && !file.isEmpty()) {
+            imageUrl = imageUploadService.uploadImage(file);
+        }
+
         GroupResponse response = groupService.updateGroup(groupId, name, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
