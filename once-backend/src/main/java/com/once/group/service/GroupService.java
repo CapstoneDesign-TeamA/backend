@@ -23,11 +23,11 @@ public class GroupService {
     private final ScheduleRepository scheduleRepository;
 
     // 그룹 생성
-    public GroupResponse createGroup(GroupCreateRequest request) {
+    public GroupResponse createGroup(String name, String description, String imageUrl) {
         Group group = new Group();
-        group.setName(request.getName());
-        group.setDescription(request.getDescription());
-        group.setImageUrl(request.getImageUrl());
+        group.setName(name);
+        group.setDescription(description);
+        group.setImageUrl(imageUrl);
 
         Group saved = groupRepository.save(group);
         return toResponse(saved); // 공통 매퍼 사용
@@ -96,13 +96,13 @@ public class GroupService {
 
 
     // 그룹 수정
-    public GroupResponse updateGroup(Long id, GroupCreateRequest request) {
+    public GroupResponse updateGroup(Long id, String name, String description, String imageUrl) {
         Group group = groupRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
 
-        if (request.getName() != null) group.setName(request.getName());
-        if (request.getDescription() != null) group.setDescription(request.getDescription());
-        if (request.getImageUrl() != null) group.setImageUrl(request.getImageUrl());
+        if (name != null) group.setName(name);
+        if (description != null) group.setDescription(description);
+        if (imageUrl != null) group.setImageUrl(imageUrl);
 
         Group updated = groupRepository.save(group);
         return toResponse(updated);
