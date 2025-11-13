@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "CalendarSchedule")  // 임시
 @Getter
 @NoArgsConstructor
 public class CalendarSchedule {
@@ -40,7 +40,7 @@ public class CalendarSchedule {
 
 
     @Builder
-    public Schedule(Long userId, Long groupId, String title, String memo, LocalDateTime startDateTime, LocalDateTime endDateTime, ScheduleType type) {
+    public CalendarSchedule(Long userId, Long groupId, String title, String memo, LocalDateTime startDateTime, LocalDateTime endDateTime, ScheduleType type) {
         this.userId = userId;
         this.groupId = groupId;
         this.title = title;
