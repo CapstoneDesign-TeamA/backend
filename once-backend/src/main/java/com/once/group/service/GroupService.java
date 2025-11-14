@@ -30,39 +30,39 @@ public class GroupService {
         group.setImageUrl(imageUrl);
 
         Group saved = groupRepository.save(group);
-        return toResponse(saved); // 공통 매퍼 사용
+        return toResponse(saved);
     }
 
-    // 내 그룹 조회  임시용
+    // 내 그룹 목록 조회 (임시)
     public List<GroupResponse> getMyGroups() {
         return groupRepository.findAll()
                 .stream()
-                .map(this::toResponse) // 공통 매퍼 사용
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-    // 내 그룹 조회
+    // 사용자 기준 내 그룹 목록 조회(요약)
     public List<GroupSummaryResponse> getMyGroupsSummary() {
-        List<Group> groups = groupRepository.findAll(); // 실제로는 사용자 기준 필터 필요
+        List<Group> groups = groupRepository.findAll(); // 실제 유저 기준으로 필터 필요 예정
 
         return groups.stream().map(group -> {
             GroupSummaryResponse dto = new GroupSummaryResponse();
             dto.setGroupId(group.getId());
             dto.setName(group.getName());
-            dto.setMemberCount(5); // 임시값, 이후 Member 테이블 연동 시 변경
-            dto.setLastActive("2025-09-26"); // 예시, 추후 변경
+            dto.setMemberCount(5); // 이후 Member 테이블 연동
+            dto.setLastActive("2025-09-26");
             return dto;
         }).collect(Collectors.toList());
     }
 
-    // 그룹 상세 보기  임시용
+    // 그룹 상세 조회 (간단 버전)
     public GroupResponse getGroupById(Long groupId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("그룹을 찾을 수 없습니다. ID: " + groupId));
-        return toResponse(group); // 공통 매퍼 사용
+        return toResponse(group);
     }
 
-    // 그룹 상세 보기
+    // 그룹 상세 조회 (전체 정보 포함)
     public GroupDetailResponse getGroupDetail(Long groupId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
@@ -70,15 +70,18 @@ public class GroupService {
         GroupDetailResponse dto = new GroupDetailResponse();
         dto.setGroupId(group.getId());
         dto.setName(group.getName());
+        dto.setDescription(group.getDescription());
+        dto.setImageUrl(group.getImageUrl());
 
         // 구성원 (추후 Member 테이블 연동 예정)
         dto.setMembers(List.of("A", "B", "C"));
 
-        // 일정 (이미 ScheduleRepository 있음)
+        // 일정
         List<ScheduleResponse> schedules = scheduleRepository.findByGroupId(groupId)
                 .stream().map(schedule -> {
                     ScheduleResponse s = new ScheduleResponse();
                     s.setScheduleId(schedule.getId());
+                    s.setGroupId(groupId);
                     s.setTitle(schedule.getTitle());
                     s.setDate(schedule.getDate().toString());
                     s.setTime(schedule.getTime().toString());
@@ -88,12 +91,14 @@ public class GroupService {
                 }).collect(Collectors.toList());
         dto.setSchedules(schedules);
 
-        // 앨범 목록 (현재 미구현이므로 임시 데이터)
-        dto.setAlbums(List.of("https://example.com/album1.jpg", "https://example.com/album2.jpg"));
+        // 앨범 (추후 실제 데이터 연동 예정)
+        dto.setAlbums(List.of(
+                "https://example.com/album1.jpg",
+                "https://example.com/album2.jpg"
+        ));
 
         return dto;
     }
-
 
     // 그룹 수정
     public GroupResponse updateGroup(Long id, String name, String description, String imageUrl) {
@@ -116,7 +121,7 @@ public class GroupService {
         groupRepository.deleteById(id);
     }
 
-    // 공통: 엔티티 -> 응답 DTO 매핑 (setter 방식으로 통일)
+    // 공통 mapper 역할
     private GroupResponse toResponse(Group group) {
         GroupResponse response = new GroupResponse();
         response.setGroupId(group.getId());
@@ -127,16 +132,15 @@ public class GroupService {
         return response;
     }
 
+    // 멤버 초대
     public GroupInviteResponse inviteMember(GroupInviteRequest request) {
         Group group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
 
-        // 실제 이메일 전송 / 회원 등록 로직은 생략
-        // 현재는 단순히 초대 요청을 처리했다고 가정
         return new GroupInviteResponse("초대가 완료되었습니다.", group.getId(), request.getEmail());
     }
 
-    // 일정 등록
+    // 일정 생성
     public ScheduleResponse createSchedule(Long groupId, ScheduleCreateRequest request) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
@@ -145,8 +149,7 @@ public class GroupService {
         schedule.setGroup(group);
         schedule.setTitle(request.getTitle());
         schedule.setDate(LocalDate.parse(request.getDate()));
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        schedule.setTime(LocalTime.parse(request.getTime(), timeFormatter));
+        schedule.setTime(LocalTime.parse(request.getTime(), DateTimeFormatter.ofPattern("HH:mm")));
         schedule.setDescription(request.getDescription());
 
         Schedule saved = scheduleRepository.save(schedule);
@@ -165,9 +168,6 @@ public class GroupService {
 
     // 일정 조회
     public List<ScheduleResponse> getSchedulesByGroup(Long groupId) {
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
-
         List<Schedule> schedules = scheduleRepository.findByGroupId(groupId);
 
         return schedules.stream().map(schedule -> {
@@ -191,18 +191,14 @@ public class GroupService {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 일정입니다."));
 
-        // 해당 일정이 해당 그룹에 속하는지 검증
         if (!schedule.getGroup().getId().equals(group.getId())) {
             throw new IllegalArgumentException("이 일정은 해당 그룹에 속하지 않습니다.");
         }
 
-        // 변경 가능 필드 업데이트
         if (request.getTitle() != null) schedule.setTitle(request.getTitle());
         if (request.getDate() != null) schedule.setDate(LocalDate.parse(request.getDate()));
-        if (request.getTime() != null) {
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-            schedule.setTime(LocalTime.parse(request.getTime(), timeFormatter));
-        }
+        if (request.getTime() != null)
+            schedule.setTime(LocalTime.parse(request.getTime(), DateTimeFormatter.ofPattern("HH:mm")));
         if (request.getDescription() != null) schedule.setDescription(request.getDescription());
 
         Schedule updated = scheduleRepository.save(schedule);
@@ -221,17 +217,13 @@ public class GroupService {
 
     // 일정 삭제
     public void deleteSchedule(Long groupId, Long scheduleId) {
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
-
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 일정입니다."));
 
-        if (!schedule.getGroup().getId().equals(group.getId())) {
+        if (!schedule.getGroup().getId().equals(groupId)) {
             throw new IllegalArgumentException("이 일정은 해당 그룹에 속하지 않습니다.");
         }
 
         scheduleRepository.delete(schedule);
     }
-
 }
