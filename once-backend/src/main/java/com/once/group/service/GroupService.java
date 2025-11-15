@@ -1,11 +1,18 @@
 package com.once.group.service;
 
+import com.once.auth.util.SecurityUtil;
+import com.once.group.domain.Album;
 import com.once.group.domain.Group;
+import com.once.group.domain.GroupRole;
+import com.once.group.domain.GroupMember;
 import com.once.group.domain.Schedule;
 import com.once.group.dto.*;
+import com.once.group.repository.AlbumRepository;
+import com.once.group.repository.GroupMemberRepository;
 import com.once.group.repository.GroupRepository;
 import com.once.group.repository.ScheduleRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +28,35 @@ public class GroupService {
 
     private final GroupRepository groupRepository;
     private final ScheduleRepository scheduleRepository;
+    private final AlbumRepository albumRepository;
+    private final GroupMemberRepository groupMemberRepository;
 
     // 그룹 생성
     public GroupResponse createGroup(String name, String description, String imageUrl) {
+
+        // 1) 현재 로그인 사용자 ID 가져오기
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) {
+            throw new IllegalStateException("로그인된 사용자 정보를 찾을 수 없습니다.");
+        }
+
+        // 2) 그룹 생성
         Group group = new Group();
         group.setName(name);
         group.setDescription(description);
         group.setImageUrl(imageUrl);
 
         Group saved = groupRepository.save(group);
+
+        // 3) 그룹장 등록
+        GroupMember leader = new GroupMember();
+        leader.setGroup(saved);
+        leader.setUserId(userId);
+        leader.setRole(GroupRole.LEADER);
+
+        groupMemberRepository.save(leader);
+
+        // 4) 응답 반환
         return toResponse(saved);
     }
 
@@ -73,10 +100,10 @@ public class GroupService {
         dto.setDescription(group.getDescription());
         dto.setImageUrl(group.getImageUrl());
 
-        // 구성원 (추후 Member 테이블 연동 예정)
+        // 구성원 (추후 Member 연동 예정)
         dto.setMembers(List.of("A", "B", "C"));
 
-        // 일정
+        // 일정 목록
         List<ScheduleResponse> schedules = scheduleRepository.findByGroupId(groupId)
                 .stream().map(schedule -> {
                     ScheduleResponse s = new ScheduleResponse();
@@ -91,11 +118,13 @@ public class GroupService {
                 }).collect(Collectors.toList());
         dto.setSchedules(schedules);
 
-        // 앨범 (추후 실제 데이터 연동 예정)
-        dto.setAlbums(List.of(
-                "https://example.com/album1.jpg",
-                "https://example.com/album2.jpg"
-        ));
+        // ★★★★★ 앨범 목록 실제 DB 기반으로 변경 ★★★★★
+        List<String> albumUrls = albumRepository.findByGroupId(groupId)
+                .stream()
+                .map(Album::getImageUrl)
+                .collect(Collectors.toList());
+
+        dto.setAlbums(albumUrls);
 
         return dto;
     }
@@ -113,12 +142,38 @@ public class GroupService {
         return toResponse(updated);
     }
 
-    // 그룹 삭제
-    public void deleteGroup(Long id) {
-        if (!groupRepository.existsById(id)) {
-            throw new EntityNotFoundException("존재하지 않는 그룹입니다.");
+    //그룹 나가기
+    @Transactional
+    public void leaveGroup(Long groupId, Long userId) {
+
+        GroupMember member = groupMemberRepository
+                .findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("그룹에 속해있지 않음"));
+
+        if (member.getRole() == GroupRole.LEADER) {
+            throw new IllegalArgumentException("그룹장은 그룹에서 나갈 수 없습니다.");
         }
-        groupRepository.deleteById(id);
+
+        groupMemberRepository.delete(member);
+
+        if (groupMemberRepository.findByGroupId(groupId).isEmpty()) {
+            groupRepository.deleteById(groupId);
+        }
+    }
+
+    //그룹 삭제
+    @Transactional
+    public void deleteGroup(Long groupId, Long userId) {
+        GroupMember leader = groupMemberRepository
+                .findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("그룹에 속해있지 않음"));
+
+        if (leader.getRole() != GroupRole.LEADER) {
+            throw new IllegalArgumentException("그룹 삭제 권한이 없습니다.");
+        }
+
+        groupMemberRepository.deleteByGroupId(groupId);
+        groupRepository.deleteById(groupId);
     }
 
     // 공통 mapper 역할

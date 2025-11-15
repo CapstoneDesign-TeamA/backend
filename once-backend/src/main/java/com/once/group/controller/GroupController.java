@@ -1,11 +1,13 @@
 package com.once.group.controller;
 
+import com.once.auth.domain.CustomUserDetails;
 import com.once.common.service.ImageUploadService;
 import com.once.group.dto.*;
 import com.once.group.service.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -52,6 +54,17 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
+    // 전체 그룹 목록 조회
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> getAllGroups() {
+        List<GroupResponse> groups = groupService.getMyGroups();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", groups);
+
+        return ResponseEntity.ok(result);
+    }
+
     // 내 그룹 목록 조회
     @GetMapping("/my")
     public ResponseEntity<Map<String, Object>> getMyGroups() {
@@ -61,7 +74,6 @@ public class GroupController {
         result.put("data", groups);
         return ResponseEntity.ok(result);
     }
-
 
     // 그룹 상세 조회
     @GetMapping("/{groupId}")
@@ -99,13 +111,38 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // 그룹 삭제
     @DeleteMapping("/{groupId}")
-    public ResponseEntity<Map<String, Object>> deleteGroup(@PathVariable Long groupId) {
-        groupService.deleteGroup(groupId);
+    public ResponseEntity<Map<String, Object>> deleteGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+
+        Long userId = user.getId();  // 로그인한 사용자 ID 가져오기
+
+        groupService.deleteGroup(groupId, userId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "그룹이 삭제되었습니다.");
+        result.put("data", null);
+
+        return ResponseEntity.ok(result);
+    }
+
+    // --------------------------
+    // ⭐ 그룹 나가기 (그룹원 전용)
+    // --------------------------
+    @PostMapping("/{groupId}/leave")
+    public ResponseEntity<Map<String, Object>> leaveGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+
+        Long userId = user.getId();
+
+        groupService.leaveGroup(groupId, userId);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "그룹에서 나갔습니다.");
         result.put("data", null);
 
         return ResponseEntity.ok(result);
