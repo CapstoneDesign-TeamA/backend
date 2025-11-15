@@ -1,10 +1,7 @@
 package com.once.config;
 
 import com.once.auth.service.AuthService;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.once.auth.service.CustomUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +12,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Component
@@ -23,10 +24,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final AuthService authService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Autowired
-    public JwtAuthenticationFilter(AuthService authService) {
+    public JwtAuthenticationFilter(AuthService authService,
+                                   CustomUserDetailsService customUserDetailsService) {
         this.authService = authService;
+        this.customUserDetailsService = customUserDetailsService;
+    }
+
+    // ★ JWT 필터가 적용되지 않아야 하는 URL
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+
+        // 인증 불필요한 엔드포인트
+        if (path.startsWith("/auth")) return true;
+        if (path.equals("/error")) return true;
+
+        // 그룹 조회(GET)는 공개
+        if (path.startsWith("/groups") && method.equals("GET")) return true;
+
+        return false; // 그 외에는 JWT 필터 적용
     }
 
     @Override
@@ -38,39 +58,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             final String authHeader = request.getHeader("Authorization");
-            final String jwt;
-            final String userEmail;
 
-            // 检查 Authorization 头是否存在且格式正确
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
 
-            jwt = authHeader.substring(7); // 提取 JWT 令牌（去掉 "Bearer " 前缀）
+                String jwt = authHeader.substring(7);
 
-            // 验证 JWT 令牌
-            if (authService.validateToken(jwt)) {
-                userEmail = authService.getUsernameFromToken(jwt);
+                if (authService.validateToken(jwt)) {
 
-                if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // 创建认证令牌
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userEmail,
-                                    null,
-                                    null // 这里可以添加权限/角色
-                            );
+                    String email = authService.getUsernameFromToken(jwt);
 
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                    logger.debug("JWT authentication successful for user: {}", userEmail);
+                        var userDetails = customUserDetailsService.loadUserByUsername(email);
+
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(
+                                        userDetails,
+                                        null,
+                                        userDetails.getAuthorities()
+                                );
+
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        logger.debug("JWT authenticated user: {}", email);
+                    }
                 }
             }
+
         } catch (Exception e) {
-            logger.error("JWT authentication error: {}", e.getMessage());
-            // 不清除安全上下文，让后续过滤器处理
+            logger.error("JWT error: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
