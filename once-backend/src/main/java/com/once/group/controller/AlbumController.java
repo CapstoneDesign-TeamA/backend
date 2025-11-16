@@ -1,10 +1,11 @@
 package com.once.group.controller;
 
-import com.once.common.service.ImageUploadService;
 import com.once.group.dto.AlbumResponse;
 import com.once.group.service.AlbumService;
 import com.once.group.service.AutoAlbumService;
+import com.once.group.service.ImageUploadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,24 +18,36 @@ import java.util.Map;
 @RestController
 @RequestMapping("/groups/{groupId}/album")
 @RequiredArgsConstructor
-
-// 앨범 등록
 public class AlbumController {
 
     private final AlbumService albumService;
     private final AutoAlbumService autoAlbumService;
     private final ImageUploadService imageUploadService;
 
-    @PostMapping
+    /**
+     * 앨범 등록 (그룹 앨범 사진 업로드)
+     * 프론트에서 보내는 FormData:
+     *  - title: string
+     *  - description: string (빈 문자열 가능)
+     *  - file: File (이미지)
+     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> createAlbum(
             @PathVariable Long groupId,
-            @RequestPart("title") String title,
-            @RequestPart("description") String description,
-            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
 
+        if (description == null) {
+            description = "";
+        }
+
+        // OCI 업로드
         String imageUrl = imageUploadService.uploadImage(file);
-        AlbumResponse album = albumService.createAlbum(groupId, title, description, file);
 
+        // 앨범 DB 저장 (AlbumService는 imageUrl을 받도록 구현)
+        AlbumResponse album = albumService.createAlbum(groupId, title, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "앨범이 등록되었습니다.");
@@ -42,8 +55,9 @@ public class AlbumController {
         return ResponseEntity.ok(result);
     }
 
-
-    // 앨범 조회
+    /**
+     * 앨범 목록 조회
+     */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAlbums(@PathVariable Long groupId) {
         List<AlbumResponse> albums = albumService.getAlbumsByGroup(groupId);
@@ -53,16 +67,29 @@ public class AlbumController {
         return ResponseEntity.ok(result);
     }
 
-    // 앨범 수정
-    @PutMapping("/{albumId}")
+    /**
+     * 앨범 수정
+     * - title / description만 바꾸는 경우 file 없이 호출 가능
+     */
+    @PutMapping(value = "/{albumId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateAlbum(
             @PathVariable Long groupId,
             @PathVariable Long albumId,
-            @RequestPart("title") String title,
-            @RequestPart("description") String description,
-            @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) throws IOException {
 
-        String imageUrl = imageUploadService.uploadImage(file);
+        if (description == null) {
+            description = "";
+        }
+
+        String imageUrl = null;
+        if (file != null && !file.isEmpty()) {
+            imageUrl = imageUploadService.uploadImage(file);
+        }
+
+        // imageUrl 이 null이면 서비스에서 기존 이미지 유지하도록 처리
         AlbumResponse updated = albumService.updateAlbum(groupId, albumId, title, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
@@ -71,32 +98,38 @@ public class AlbumController {
         return ResponseEntity.ok(result);
     }
 
-    // 앨범 삭제
+    /**
+     * 앨범 삭제
+     */
     @DeleteMapping("/{albumId}")
     public ResponseEntity<Map<String, Object>> deleteAlbum(
             @PathVariable Long groupId,
-            @PathVariable Long albumId) {
-
+            @PathVariable Long albumId
+    ) {
         albumService.deleteAlbum(groupId, albumId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "앨범이 삭제되었습니다.");
         result.put("data", null);
-
         return ResponseEntity.ok(result);
     }
 
-    // 모임 종료 후 자동 앨범 생성
+    /**
+     * 모임 종료 후 자동 앨범 생성
+     */
     @PostMapping("/auto")
     public ResponseEntity<Map<String, Object>> createAutoAlbum(
             @PathVariable Long groupId,
-            @RequestBody Map<String, Long> request) {
-
+            @RequestBody Map<String, Long> request
+    ) {
         Long meetingId = request.get("meetingId");
         AlbumResponse album = autoAlbumService.createAutoAlbum(groupId, meetingId);
 
+        // 이미지가 없을 경우 기본 이미지 채우기
         if (album.getImageUrl() == null) {
-            album.setImageUrl("https://objectstorage.ca-toronto-1.oraclecloud.com/n/yzhu49nqu7rk/b/once-bucket/o/default_album.png");
+            album.setImageUrl(
+                    "https://objectstorage.ca-toronto-1.oraclecloud.com/n/yzhu49nqu7rk/b/once-bucket/o/default_album.png"
+            );
         }
 
         Map<String, Object> data = new HashMap<>();
@@ -107,5 +140,4 @@ public class AlbumController {
         result.put("data", data);
         return ResponseEntity.ok(result);
     }
-
 }
