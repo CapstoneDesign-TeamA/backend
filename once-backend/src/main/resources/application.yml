@@ -38,4 +38,4 @@ logging:
 
 jwt:
   secret: your-jwt-secret-key-here-make-it-very-long-and-secure
-  expiration: 604800 # 7 days in seconds
+  expiration: 86400000
