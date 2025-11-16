@@ -1,3 +1,4 @@
+// src/main/java/com/once/calendar/service/CalendarService.java
 package com.once.calendar.service;
 
 import com.once.calendar.domain.CalendarSchedule;
@@ -12,79 +13,109 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
+import java.time.format.DateTimeFormatter;
+
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CalendarService {
 
+    // 클래스 안에 공통 포맷터 하나 정의
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private final CalendarScheduleRepository scheduleRepository;
-    // private final GroupMemberService groupMemberService; // 내가 속한 그룹 ID 목록을 가져오기 위함
-    // private final GroupRepository groupRepository; // 그룹 이름 등을 가져오기 위함
 
-    // 임시로 인증된 사용자 ID 반환
+    // 임시: 인증된 사용자 ID
     private Long getUserIdFromAuth() {
-        // todo 실제 사용자 id 가져오기
         return 1L;
     }
 
-    // 임시로 사용자가 속한 그룹 id 목록 반환
+    // 임시: 사용자가 속한 그룹 ID 리스트
     private List<Long> getMyGroupIds(Long userId) {
-        // todo groupMemberService 등을 통해 실제 사용자가 속한 그룹 id 목록 조회
         return List.of(101L, 102L);
     }
 
+    // 일정 생성
     @Transactional
     public ScheduleCreateResponse createSchedule(ScheduleCreateRequest request) {
         Long userId = getUserIdFromAuth();
 
-        ScheduleType type = (request.getGroupId() == null) ? ScheduleType.PERSONAL : ScheduleType.GROUP;
+        if (request == null) {
+            throw new IllegalArgumentException("요청 본문이 비어 있습니다.");
+        }
+        if (request.getStartDateTime() == null || request.getEndDateTime() == null) {
+            throw new IllegalArgumentException("startDateTime / endDateTime 은 필수 값입니다.");
+        }
+
+        // 문자열 → LocalDateTime 변환
+        LocalDateTime start = LocalDateTime.parse(request.getStartDateTime(), DATE_TIME_FORMATTER);
+        LocalDateTime end = LocalDateTime.parse(request.getEndDateTime(), DATE_TIME_FORMATTER);
+
+        System.out.println("[DEBUG] parsed start=" + start + ", end=" + end);
+
+        ScheduleType type =
+                (request.getGroupId() == null) ? ScheduleType.PERSONAL : ScheduleType.GROUP;
 
         CalendarSchedule schedule = CalendarSchedule.builder()
                 .userId(userId)
                 .groupId(request.getGroupId())
                 .title(request.getTitle())
                 .memo(request.getMemo())
-                .startDateTime(request.getStartDateTime())
-                .endDateTime(request.getEndDateTime())
+                .startDateTime(start)
+                .endDateTime(end)
                 .type(type)
                 .build();
 
-        CalendarSchedule savedSchedule = scheduleRepository.save(schedule);
+        CalendarSchedule saved = scheduleRepository.save(schedule);
 
-        return new ScheduleCreateResponse(savedSchedule.getScheduleId(), "일정이 성공적으로 등록되었습니다.");
+        return new ScheduleCreateResponse(
+                saved.getScheduleId(),
+                "일정이 성공적으로 등록되었습니다."
+        );
     }
 
+    // 일정 수정
     @Transactional
-    public ScheduleUpdateResponse updateSchedule(Long scheduleId, ScheduleUpdateRequest request) {
+    public ScheduleUpdateResponse updateSchedule(Long scheduleId,
+                                                 ScheduleUpdateRequest request) {
         Long userId = getUserIdFromAuth();
+
         CalendarSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
-        // todo 일정 수정 권한 확인 (본인이 생성한 일정만 수정 가능한지)
-        /*
-        if (!schedule.getUserId().equals(userId)) {
-            throw new SecurityException("수정 권한이 없습니다.");
+        if (request == null) {
+            throw new IllegalArgumentException("요청 본문이 비어 있습니다.");
         }
-        */
+        if (request.getStartDateTime() == null || request.getEndDateTime() == null) {
+            throw new IllegalArgumentException("startDateTime / endDateTime 은 필수 값입니다.");
+        }
 
-        schedule.update(request.getTitle(), request.getMemo(), request.getStartDateTime(), request.getEndDateTime());
+        LocalDateTime start = LocalDateTime.parse(request.getStartDateTime(), DATE_TIME_FORMATTER);
+        LocalDateTime end = LocalDateTime.parse(request.getEndDateTime(), DATE_TIME_FORMATTER);
 
-        return new ScheduleUpdateResponse(schedule.getScheduleId(), "일정이 성공적으로 수정되었습니다.");
+        schedule.update(
+                request.getTitle(),
+                request.getMemo(),
+                start,
+                end
+        );
+
+        return new ScheduleUpdateResponse(
+                schedule.getScheduleId(),
+                "일정이 성공적으로 수정되었습니다."
+        );
     }
 
+    // 일정 삭제
     @Transactional
     public void deleteSchedule(Long scheduleId) {
         Long userId = getUserIdFromAuth();
+
         CalendarSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
-        // todo 일정 삭제 권한 확인
-        /*
-        if (!schedule.getUserId().equals(userId)) {
-            throw new SecurityException("삭제 권한이 없습니다.");
-        }
-        */
+        // todo: 권한 체크
 
         scheduleRepository.delete(schedule);
     }
@@ -98,7 +129,8 @@ public class CalendarService {
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
 
-        List<CalendarSchedule> schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
+        List<CalendarSchedule> schedules =
+                scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
 
         List<ScheduleInfo> scheduleInfos = schedules.stream()
                 .map(s -> new ScheduleInfo(
@@ -122,7 +154,8 @@ public class CalendarService {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.atTime(23, 59, 59);
 
-        List<CalendarSchedule> schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
+        List<CalendarSchedule> schedules =
+                scheduleRepository.findPersonalAndGroupSchedules(userId, myGroupIds, start, end);
 
         List<DailyScheduleInfo> scheduleInfos = schedules.stream()
                 .map(s -> new DailyScheduleInfo(
@@ -136,16 +169,15 @@ public class CalendarService {
         return new DailyScheduleResponse(scheduleInfos);
     }
 
+    // 일정 상세 조회
     public ScheduleDetailResponse getScheduleDetails(Long scheduleId) {
         Long userId = getUserIdFromAuth();
+
         CalendarSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
 
-        // todo 일정 조회 권한 확인 (내가 속한 그룹의 일정이거나 내 일정인지)
-
         String groupName = null;
         if (schedule.getType() == ScheduleType.GROUP && schedule.getGroupId() != null) {
-            // todo groupRepository.findById(schedule.getGroupId()).map(Group::getName).orElse(null);
             groupName = "a조"; // 임시
         }
 
@@ -161,7 +193,7 @@ public class CalendarService {
         );
     }
 
-    // 개인 / 그룹 일정 구분
+    // 개인 / 그룹 일정 색상 구분
     private String getScheduleColor(ScheduleType type) {
         return (type == ScheduleType.PERSONAL) ? "#000000" : "#6799FF";
     }
