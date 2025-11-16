@@ -1,4 +1,4 @@
-package com.once.common.service;
+package com.once.group.service;
 
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
