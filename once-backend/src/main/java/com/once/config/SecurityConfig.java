@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -38,8 +39,9 @@ public class SecurityConfig {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable()) // CSRF 비활성화
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
                         // 공개 엔드포인트
                         .requestMatchers("/auth/**").permitAll()
@@ -48,19 +50,30 @@ public class SecurityConfig {
                         .requestMatchers("/users/check-username").permitAll()
                         .requestMatchers("/users/check-nickname").permitAll()
                         .requestMatchers("/test/**").permitAll()
-                        .requestMatchers("/groups/**").permitAll() // 그룹 기능 임시 공개
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/calendar").permitAll()
 
-                        // 인증 필요한 엔드포인트
+                        // ★ GET /groups/** 는 완전 공개
+                        .requestMatchers(HttpMethod.GET, "/groups/**").permitAll()
+
+                        // ★ POST/PUT/DELETE /groups/** 인증 필요
+                        .requestMatchers(HttpMethod.POST, "/groups/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/groups/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/groups/**").authenticated()
+
+                        // 유저 정보 API 인증 필요
                         .requestMatchers("/users/me").authenticated()
                         .requestMatchers("/users/profile").authenticated()
                         .requestMatchers("/users/interests").authenticated()
                         .requestMatchers("/users/terms").authenticated()
                         .requestMatchers("/users/activity-logs").authenticated()
                         .requestMatchers("/events/**").authenticated()
+
+                        // 그 외 요청은 모두 인증 필요
                         .anyRequest().authenticated()
                 )
+
+                // JWT 필터 등록
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -68,6 +81,7 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -76,6 +90,7 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
