@@ -13,7 +13,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update   # 개발 중엔 update, 운영은 validate 권장
+      ddl-auto: update   # 개발 중엔 update, 운영은 valsidate 권장
     open-in-view: false
     properties:
       hibernate:
