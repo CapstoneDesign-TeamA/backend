@@ -49,7 +49,6 @@ public class SecurityConfig {
                         .requestMatchers("/users/check-nickname").permitAll()
                         .requestMatchers("/test/**").permitAll()
                         .requestMatchers("/group/**").permitAll() // 그룹 기능 임시 공개
-                        .requestMatchers("/groups/**").permitAll()  // 임시
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/calendar/**").permitAll()
 
