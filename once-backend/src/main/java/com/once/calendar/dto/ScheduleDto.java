@@ -1,5 +1,11 @@
 package com.once.calendar.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -15,6 +21,8 @@ public class ScheduleDto {
 
     @Getter
     @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class ScheduleCreateRequest {
         @NotBlank(message = "제목은 필수 입력 값입니다.")
         private String title;
@@ -22,8 +30,14 @@ public class ScheduleDto {
         @Size(max = 200, message = "메모는 최대 200자까지 작성 가능합니다.")
         private String memo;
 
+        @JsonProperty("startDateTime")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         private LocalDateTime startDateTime;
+
+        @JsonProperty("endDateTime")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         private LocalDateTime endDateTime;
+
         private Long groupId; // optional
     }
 
