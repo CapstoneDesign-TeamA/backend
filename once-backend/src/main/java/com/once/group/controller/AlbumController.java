@@ -29,25 +29,28 @@ public class AlbumController {
      * 프론트에서 보내는 FormData:
      *  - title: string
      *  - description: string (빈 문자열 가능)
-     *  - file: File (이미지)
+     *  - files: File[], 여러 장 업로드 가능
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> createAlbum(
             @PathVariable Long groupId,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestPart("file") MultipartFile file
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
     ) throws IOException {
 
         if (description == null) {
             description = "";
         }
 
-        // OCI 업로드
-        String imageUrl = imageUploadService.uploadImage(file);
+        // 다중 이미지 업로드 처리
+        List<String> imageUrls = null;
+        if (files != null && !files.isEmpty()) {
+            imageUrls = imageUploadService.uploadImages(files); //  다중 업로드 메서드
+        }
 
-        // 앨범 DB 저장 (AlbumService는 imageUrl을 받도록 구현)
-        AlbumResponse album = albumService.createAlbum(groupId, title, description, imageUrl);
+        // 앨범 DB 등록
+        AlbumResponse album = albumService.createAlbum(groupId, title, description, imageUrls);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "앨범이 등록되었습니다.");
@@ -68,8 +71,9 @@ public class AlbumController {
     }
 
     /**
-     * 앨범 수정
-     * - title / description만 바꾸는 경우 file 없이 호출 가능
+     * 앨범 수정 (사진 여러 장 교체 가능)
+     * - 파일을 안 보내면 텍스트만 수정됨
+     * - 파일을 보내면 기존 사진 모두 삭제 후 새 사진으로 교체
      */
     @PutMapping(value = "/{albumId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateAlbum(
@@ -77,20 +81,20 @@ public class AlbumController {
             @PathVariable Long albumId,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestPart(value = "file", required = false) MultipartFile file
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
     ) throws IOException {
 
         if (description == null) {
             description = "";
         }
 
-        String imageUrl = null;
-        if (file != null && !file.isEmpty()) {
-            imageUrl = imageUploadService.uploadImage(file);
+        // 다중 파일 업로드 → URL 리스트 생성
+        List<String> imageUrls = null;
+        if (files != null && !files.isEmpty()) {
+            imageUrls = imageUploadService.uploadImages(files); // 다중 이미지 업로드
         }
 
-        // imageUrl 이 null이면 서비스에서 기존 이미지 유지하도록 처리
-        AlbumResponse updated = albumService.updateAlbum(groupId, albumId, title, description, imageUrl);
+        AlbumResponse updated = albumService.updateAlbum(groupId, albumId, title, description, imageUrls);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "앨범이 수정되었습니다.");
@@ -115,7 +119,7 @@ public class AlbumController {
     }
 
     /**
-     * 모임 종료 후 자동 앨범 생성
+     * 모임 종료 후 자동 앨범 생성 (아직 단일 이미지 구조)
      */
     @PostMapping("/auto")
     public ResponseEntity<Map<String, Object>> createAutoAlbum(

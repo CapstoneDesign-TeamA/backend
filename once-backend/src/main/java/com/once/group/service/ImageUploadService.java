@@ -8,6 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -54,4 +56,20 @@ public class ImageUploadService {
             throw new IOException("이미지 업로드 실패: " + response.getStatusCode());
         }
     }
+
+    public List<String> uploadImages(List<MultipartFile> files) throws IOException {
+        List<String> urls = new ArrayList<>();
+
+        if (files == null) {
+            return urls;
+        }
+
+        for (MultipartFile file : files) {
+            if (file != null && !file.isEmpty()) {
+                urls.add(uploadImage(file));
+            }
+        }
+        return urls;
+    }
+
 }

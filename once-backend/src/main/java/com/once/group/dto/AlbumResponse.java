@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -12,6 +13,7 @@ public class AlbumResponse {
     private Long groupId;        // 그룹 ID
     private String title;        // 앨범 제목
     private String description;  // 앨범 설명
-    private String imageUrl;     // 대표 이미지 URL
+    private String imageUrl; // 대표 이미지 URL
+    private List<String> photos; // 이미지 여러장
     private LocalDateTime createdAt;    // 생성 시각 (문자열)
 }
