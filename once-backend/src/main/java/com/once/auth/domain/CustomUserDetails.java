@@ -1,12 +1,16 @@
 package com.once.auth.domain;
 
 import com.once.user.domain.User;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
 import java.util.Collections;
 
+@Getter
+@Setter
 public class CustomUserDetails implements UserDetails {
 
     private final User user;
