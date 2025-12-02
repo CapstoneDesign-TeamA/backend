@@ -70,20 +70,19 @@ public class GroupController {
     // ======================
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllGroups() {
-        List<GroupResponse> groups = groupService.getMyGroups();
+        List<GroupResponse> groups = groupService.getAllGroups();
 
         Map<String, Object> result = new HashMap<>();
         result.put("data", groups);
-
         return ResponseEntity.ok(result);
     }
 
     // ======================
-    // 내 그룹 목록 조회
+    // 내가 속한 그룹 조회
     // ======================
     @GetMapping("/my")
     public ResponseEntity<Map<String, Object>> getMyGroups() {
-        List<GroupSummaryResponse> groups = groupService.getMyGroupsSummary();
+        List<GroupResponse> groups = groupService.getMyGroups();
 
         Map<String, Object> result = new HashMap<>();
         result.put("data", groups);

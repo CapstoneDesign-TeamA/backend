@@ -43,37 +43,23 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        // 공개 엔드포인트
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/users/signup").permitAll()
-                        .requestMatchers("/users/check-email").permitAll()
-                        .requestMatchers("/users/check-username").permitAll()
-                        .requestMatchers("/users/check-nickname").permitAll()
                         .requestMatchers("/test/**").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/calendar").permitAll()
 
-                        // ★ GET /groups/** 는 완전 공개
-                        .requestMatchers(HttpMethod.GET, "/groups/**").permitAll()
+                        // 그룹 상세 조회는 공개 허용
+                        .requestMatchers(HttpMethod.GET, "/groups/*").permitAll()
 
-                        // ★ POST/PUT/DELETE /groups/** 인증 필요
-                        .requestMatchers(HttpMethod.POST, "/groups/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/groups/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/groups/**").authenticated()
+                        // 내 그룹 목록은 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/groups/my").authenticated()
 
-                        // 유저 정보 API 인증 필요
-                        .requestMatchers("/users/me").authenticated()
-                        .requestMatchers("/users/profile").authenticated()
-                        .requestMatchers("/users/interests").authenticated()
-                        .requestMatchers("/users/terms").authenticated()
-                        .requestMatchers("/users/activity-logs").authenticated()
-                        .requestMatchers("/events/**").authenticated()
+                        // 일정 조회도 인증 필요
+                        .requestMatchers(HttpMethod.GET, "/groups/*/schedules").authenticated()
 
-                        // 그 외 요청은 모두 인증 필요
                         .anyRequest().authenticated()
                 )
 
-                // JWT 필터 등록
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

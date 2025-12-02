@@ -55,17 +55,27 @@ public class GroupService {
         return toResponse(saved);
     }
 
-    // 내 그룹 목록 조회
-    public List<GroupResponse> getMyGroups() {
-        Long userId = SecurityUtil.getCurrentUserId();
-
-        // 실제로는 userId 기준으로 필터해야 함
-        List<GroupMember> myMembership = groupMemberRepository.findByUserId(userId);
-
-        return myMembership.stream()
-                .map(gm -> toResponse(gm.getGroup()))
+    // 전체 그룹 조회
+    public List<GroupResponse> getAllGroups() {
+        return groupRepository.findAll()
+                .stream()
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
+
+    // 내가 속한 그룹 조회
+    public List<GroupResponse> getMyGroups() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return List.of();
+
+        List<GroupMember> membership = groupMemberRepository.findByUserIdFetchGroup(userId);
+
+        return membership.stream()
+                .map(m -> toResponse(m.getGroup()))
+                .collect(Collectors.toList());
+    }
+
+
 
     // 사용자 기준 그룹 요약 조회
     public List<GroupSummaryResponse> getMyGroupsSummary() {

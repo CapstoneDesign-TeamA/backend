@@ -77,6 +77,25 @@ public class AuthService {
                 .compact();
     }
 
+    // 토큰에서 userId 추출
+    public Long getUserIdFromToken(String token) {
+        try {
+            SecretKey key = getSigningKey();
+
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            return claims.get("userId", Long.class);
+
+        } catch (Exception e) {
+            logger.error("JWT parsing error: {}", e.getMessage());
+            return null;
+        }
+    }
+
     // 리프레시 토큰 생성 + DB 저장
     public String generateRefreshToken(User user) {
         String accessToken = generateAccessToken(user);
