@@ -1,16 +1,14 @@
 package com.once.group.service;
 
 import com.once.auth.util.SecurityUtil;
-import com.once.group.domain.Album;
-import com.once.group.domain.Group;
-import com.once.group.domain.GroupRole;
-import com.once.group.domain.GroupMember;
-import com.once.group.domain.Schedule;
+import com.once.group.domain.*;
 import com.once.group.dto.*;
 import com.once.group.repository.AlbumRepository;
 import com.once.group.repository.GroupMemberRepository;
 import com.once.group.repository.GroupRepository;
 import com.once.group.repository.ScheduleRepository;
+import com.once.user.domain.User;
+import com.once.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -30,17 +28,16 @@ public class GroupService {
     private final ScheduleRepository scheduleRepository;
     private final AlbumRepository albumRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final UserRepository userRepository;  // ★ 추가됨
 
     // 그룹 생성
     public GroupResponse createGroup(String name, String description, String imageUrl) {
 
-        // 1) 현재 로그인 사용자 ID 가져오기
         Long userId = SecurityUtil.getCurrentUserId();
         if (userId == null) {
             throw new IllegalStateException("로그인된 사용자 정보를 찾을 수 없습니다.");
         }
 
-        // 2) 그룹 생성
         Group group = new Group();
         group.setName(name);
         group.setDescription(description);
@@ -48,7 +45,6 @@ public class GroupService {
 
         Group saved = groupRepository.save(group);
 
-        // 3) 그룹장 등록
         GroupMember leader = new GroupMember();
         leader.setGroup(saved);
         leader.setUserId(userId);
@@ -56,41 +52,43 @@ public class GroupService {
 
         groupMemberRepository.save(leader);
 
-        // 4) 응답 반환
         return toResponse(saved);
     }
 
-    // 내 그룹 목록 조회 (임시)
+    // 내 그룹 목록 조회
     public List<GroupResponse> getMyGroups() {
-        return groupRepository.findAll()
-                .stream()
-                .map(this::toResponse)
+        Long userId = SecurityUtil.getCurrentUserId();
+
+        // 실제로는 userId 기준으로 필터해야 함
+        List<GroupMember> myMembership = groupMemberRepository.findByUserId(userId);
+
+        return myMembership.stream()
+                .map(gm -> toResponse(gm.getGroup()))
                 .collect(Collectors.toList());
     }
 
-    // 사용자 기준 내 그룹 목록 조회(요약)
+    // 사용자 기준 그룹 요약 조회
     public List<GroupSummaryResponse> getMyGroupsSummary() {
-        List<Group> groups = groupRepository.findAll(); // 실제 유저 기준으로 필터 필요 예정
+        Long userId = SecurityUtil.getCurrentUserId();
 
-        return groups.stream().map(group -> {
-            GroupSummaryResponse dto = new GroupSummaryResponse();
-            dto.setGroupId(group.getId());
-            dto.setName(group.getName());
-            dto.setMemberCount(5); // 이후 Member 테이블 연동
-            dto.setLastActive("2025-09-26");
-            return dto;
-        }).collect(Collectors.toList());
+        List<GroupMember> members = groupMemberRepository.findByUserId(userId);
+
+        return members.stream()
+                .map(m -> {
+                    Group g = m.getGroup();
+                    GroupSummaryResponse dto = new GroupSummaryResponse();
+                    dto.setGroupId(g.getId());
+                    dto.setName(g.getName());
+                    dto.setMemberCount((int) groupMemberRepository.countByGroupId(g.getId()));
+                    dto.setLastActive("2025-09-26"); // TODO: 추후 실제 활동 기반 계산
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
-    // 그룹 상세 조회 (간단 버전)
-    public GroupResponse getGroupById(Long groupId) {
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new EntityNotFoundException("그룹을 찾을 수 없습니다. ID: " + groupId));
-        return toResponse(group);
-    }
-
-    // 그룹 상세 조회 (전체 정보 포함)
+    // 그룹 상세 조회 (전체)
     public GroupDetailResponse getGroupDetail(Long groupId) {
+
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
 
@@ -100,12 +98,23 @@ public class GroupService {
         dto.setDescription(group.getDescription());
         dto.setImageUrl(group.getImageUrl());
 
-        // 구성원 (추후 Member 연동 예정)
-        dto.setMembers(List.of("A", "B", "C"));
+        // ★ 실제 구성원 로드
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+
+        List<String> memberNames = members.stream()
+                .map(member ->
+                        userRepository.findById(member.getUserId())
+                                .map(User::getNickname)  // 닉네임
+                                .orElse("Unknown-" + member.getUserId())
+                )
+                .toList();
+
+        dto.setMembers(memberNames);
 
         // 일정 목록
         List<ScheduleResponse> schedules = scheduleRepository.findByGroupId(groupId)
-                .stream().map(schedule -> {
+                .stream()
+                .map(schedule -> {
                     ScheduleResponse s = new ScheduleResponse();
                     s.setScheduleId(schedule.getId());
                     s.setGroupId(groupId);
@@ -115,10 +124,12 @@ public class GroupService {
                     s.setDescription(schedule.getDescription());
                     s.setCreatedAt(schedule.getCreatedAt());
                     return s;
-                }).collect(Collectors.toList());
+                })
+                .collect(Collectors.toList());
+
         dto.setSchedules(schedules);
 
-        // ★★★★★ 앨범 목록 실제 DB 기반으로 변경 ★★★★★
+        // 앨범 목록
         List<String> albumUrls = albumRepository.findByGroupId(groupId)
                 .stream()
                 .map(Album::getImageUrl)
@@ -142,7 +153,7 @@ public class GroupService {
         return toResponse(updated);
     }
 
-    //그룹 나가기
+    // 그룹 나가기
     @Transactional
     public void leaveGroup(Long groupId, Long userId) {
 
@@ -161,7 +172,7 @@ public class GroupService {
         }
     }
 
-    //그룹 삭제
+    // 그룹 삭제
     @Transactional
     public void deleteGroup(Long groupId, Long userId) {
         GroupMember leader = groupMemberRepository
@@ -176,7 +187,7 @@ public class GroupService {
         groupRepository.deleteById(groupId);
     }
 
-    // 공통 mapper 역할
+    // 공통 mapper
     private GroupResponse toResponse(Group group) {
         GroupResponse response = new GroupResponse();
         response.setGroupId(group.getId());
@@ -187,7 +198,7 @@ public class GroupService {
         return response;
     }
 
-    // 멤버 초대
+    // 멤버 초대 (추후 실제 초대 로직 필요)
     public GroupInviteResponse inviteMember(GroupInviteRequest request) {
         Group group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
@@ -240,6 +251,7 @@ public class GroupService {
 
     // 일정 수정
     public ScheduleResponse updateSchedule(Long groupId, Long scheduleId, ScheduleCreateRequest request) {
+
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
 
