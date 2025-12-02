@@ -13,24 +13,34 @@ public class MeetingResponse {
     private Long creatorId;
     private String title;
     private String description;
-    private String date;
+
+    private String startDate;  // 프론트는 String으로 받기 때문에 유지
+    private String endDate;
     private String time;
     private String location;
-    private Integer minMembers;
-    private Integer maxMembers;
 
-    public static MeetingResponse from(Meeting meeting) {
+    private int participantCount;
+
+    public static MeetingResponse from(Meeting meeting, int participantCount) {
         MeetingResponse res = new MeetingResponse();
+
         res.setId(meeting.getId());
         res.setGroupId(meeting.getGroupId());
         res.setCreatorId(meeting.getCreatorId());
         res.setTitle(meeting.getTitle());
         res.setDescription(meeting.getDescription());
-        res.setDate(meeting.getDate());
+
+        res.setStartDate(
+                meeting.getStartDate() != null ? meeting.getStartDate().toString() : null
+        );
+        res.setEndDate(
+                meeting.getEndDate() != null ? meeting.getEndDate().toString() : null
+        );
+
         res.setTime(meeting.getTime());
         res.setLocation(meeting.getLocation());
-        res.setMinMembers(meeting.getMinMembers());
-        res.setMaxMembers(meeting.getMaxMembers());
+        res.setParticipantCount(participantCount);
+
         return res;
     }
 }

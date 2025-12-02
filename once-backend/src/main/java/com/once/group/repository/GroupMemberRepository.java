@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
+
     @Query("SELECT gm FROM GroupMember gm JOIN FETCH gm.group WHERE gm.userId = :userId")
     List<GroupMember> findByUserIdFetchGroup(Long userId);
 
@@ -22,4 +23,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     boolean existsByGroupIdAndUserId(Long groupId, Long userId);
 
     long countByGroupId(Long groupId);
+
+    // 여기 수정된 부분 — 실제 멤버 userId 들을 반환
+    @Query("SELECT gm.userId FROM GroupMember gm WHERE gm.group.id = :groupId")
+    List<Long> findUserIdsByGroupId(Long groupId);
 }

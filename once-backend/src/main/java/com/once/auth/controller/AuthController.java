@@ -48,10 +48,22 @@ public class AuthController {
         String refreshToken = authService.generateRefreshToken(user);
         userLog = user;
 
-        // 활동 로그 기록
         userService.logUserActivity(user.getId(), "/auth/login", "로그인");
 
-        AuthResponse response = new AuthResponse(accessToken, refreshToken, "로그인 성공");
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("access_token", accessToken);
+        response.put("refresh_token", refreshToken);
+        response.put("message", "로그인 성공");
+
+
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("id", user.getId());
+        userInfo.put("name", user.getUsername());
+        userInfo.put("email", user.getEmail());
+
+        response.put("user", userInfo);
+
         return ResponseEntity.ok(response);
     }
 

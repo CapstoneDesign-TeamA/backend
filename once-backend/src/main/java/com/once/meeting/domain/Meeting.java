@@ -3,6 +3,7 @@ package com.once.meeting.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,15 +32,13 @@ public class Meeting {
     private String description;
 
     @Column(nullable = false)
-    private String date; // YYYY-MM-DD
+    private LocalDate startDate;
 
     @Column(nullable = false)
-    private String time; // HH:mm
+    private LocalDate endDate;
 
+    private String time;
     private String location;
-
-    private Integer minMembers;
-    private Integer maxMembers;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

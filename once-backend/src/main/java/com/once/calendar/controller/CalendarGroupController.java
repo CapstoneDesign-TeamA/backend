@@ -1,6 +1,5 @@
 package com.once.calendar.controller;
 
-import com.once.calendar.dto.ScheduleDto.*;
 import com.once.calendar.service.CalendarGroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -8,37 +7,43 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/groups")
+@RequestMapping("/calendar/group")
 public class CalendarGroupController {
 
-    private final CalendarGroupService groupService;
+    private final CalendarGroupService calendarGroupService;
 
-    // 그룹원 Free / Busy 조회
-    @GetMapping("/{groupId}/freebusy")
-    public ResponseEntity<GroupFreeBusyResponse> getGroupFreeBusy(
+    /**
+     * 날짜별 그룹 멤버 busy-count 조회
+     * 예: /calendar/group/8/busy-count?startDate=2025-12-01&endDate=2025-12-31
+     */
+    @GetMapping("/{groupId}/busy-count")
+    public ResponseEntity<?> getBusyCount(
             @PathVariable Long groupId,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate
+    ) {
 
-        GroupFreeBusyResponse response =
-                groupService.getGroupFreeBusy(groupId, startDate, endDate);
+        Map<String, Integer> busyCountByDay =
+                calendarGroupService.getBusyCountByDay(groupId, startDate, endDate);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of("busyCountByDay", busyCountByDay));
     }
 
-    // 그룹 모임 불가 주 분석
-    @GetMapping("/{groupId}/unavailable-weeks")
-    public ResponseEntity<UnavailableWeeksResponse> getUnavailableWeeks(
+    /**
+     * 특정 월의 그룹 구성원 전체 일정 조회 (개인 + 그룹 일정 모두 포함)
+     * 예: /calendar/group/8/schedules?year=2025&month=12
+     */
+    @GetMapping("/{groupId}/schedules")
+    public ResponseEntity<?> getGroupMemberSchedules(
             @PathVariable Long groupId,
             @RequestParam int year,
-            @RequestParam int month) {
-
-        UnavailableWeeksResponse response =
-                groupService.getUnavailableWeeks(groupId, year, month);
-
-        return ResponseEntity.ok(response);
+            @RequestParam int month
+    ) {
+        var schedules = calendarGroupService.getMonthlySchedulesForGroupMembers(groupId, year, month);
+        return ResponseEntity.ok(schedules);
     }
 }

@@ -1,41 +1,45 @@
 package com.once.meeting.service;
 
-import com.once.group.repository.GroupMemberRepository;
-import com.once.meeting.domain.Meeting;
 import com.once.meeting.domain.MeetingParticipant;
 import com.once.meeting.domain.ParticipationStatus;
 import com.once.meeting.dto.ParticipantResponse;
 import com.once.meeting.repository.MeetingParticipantRepository;
-import com.once.meeting.repository.MeetingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class MeetingParticipantService {
 
-    private final MeetingRepository meetingRepository;
     private final MeetingParticipantRepository participantRepository;
-    private final GroupMemberRepository groupMemberRepository;
 
+    /**
+     * 참여 처리
+     */
     public void accept(Long groupId, Long meetingId, Long userId) {
 
-        Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new RuntimeException("모임 없음"));
+        // 기존 기록 확인
+        MeetingParticipant existing =
+                participantRepository.findByMeetingIdAndUserId(meetingId, userId)
+                        .orElse(null);
 
-        if (!meeting.getGroupId().equals(groupId)) {
-            throw new RuntimeException("그룹 불일치");
+        if (existing != null) {
+            // 이미 참여 중이라면 에러 발생
+            if (existing.getStatus() == ParticipationStatus.ACCEPTED) {
+                throw new IllegalStateException("ALREADY_PARTICIPATED");
+            }
+
+            // 기존이 DECLINED → 참여로 변경
+            existing.setStatus(ParticipationStatus.ACCEPTED);
+            participantRepository.save(existing);
+            return;
         }
 
-        if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, userId)) {
-            throw new RuntimeException("그룹 멤버 아님");
-        }
-
-        participantRepository.findByMeetingIdAndUserId(meetingId, userId)
-                .ifPresent(p -> { throw new RuntimeException("이미 참여됨"); });
-
+        // 처음 참여하는 경우 → 새로운 엔트리 삽입
         MeetingParticipant p = MeetingParticipant.builder()
                 .meetingId(meetingId)
                 .userId(userId)
@@ -45,41 +49,39 @@ public class MeetingParticipantService {
         participantRepository.save(p);
     }
 
+    /**
+     * 불참 처리
+     */
     public void decline(Long groupId, Long meetingId, Long userId) {
 
-        Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new RuntimeException("모임 없음"));
+        MeetingParticipant existing =
+                participantRepository.findByMeetingIdAndUserId(meetingId, userId)
+                        .orElse(null);
 
-        if (!meeting.getGroupId().equals(groupId)) {
-            throw new RuntimeException("그룹 불일치");
+        if (existing != null) {
+            if (existing.getStatus() == ParticipationStatus.DECLINED) {
+                throw new IllegalStateException("ALREADY_DECLINED");
+            }
+
+            existing.setStatus(ParticipationStatus.DECLINED);
+            participantRepository.save(existing);
+            return;
         }
 
-        participantRepository.findByMeetingIdAndUserId(meetingId, userId)
-                .ifPresentOrElse(
-                        p -> {
-                            p.setStatus(ParticipationStatus.DECLINED);
-                            participantRepository.save(p);
-                        },
-                        () -> {
-                            MeetingParticipant newP = MeetingParticipant.builder()
-                                    .meetingId(meetingId)
-                                    .userId(userId)
-                                    .status(ParticipationStatus.DECLINED)
-                                    .build();
-                            participantRepository.save(newP);
-                        }
-                );
+        MeetingParticipant p = MeetingParticipant.builder()
+                .meetingId(meetingId)
+                .userId(userId)
+                .status(ParticipationStatus.DECLINED)
+                .build();
+
+        participantRepository.save(p);
     }
 
+    /**
+     * 참여자 목록 조회
+     */
+    @Transactional(readOnly = true)
     public List<ParticipantResponse> getParticipants(Long groupId, Long meetingId) {
-
-        Meeting meeting = meetingRepository.findById(meetingId)
-                .orElseThrow(() -> new RuntimeException("모임 없음"));
-
-        if (!meeting.getGroupId().equals(groupId)) {
-            throw new RuntimeException("그룹 불일치");
-        }
-
         return participantRepository.findByMeetingId(meetingId)
                 .stream()
                 .map(ParticipantResponse::from)

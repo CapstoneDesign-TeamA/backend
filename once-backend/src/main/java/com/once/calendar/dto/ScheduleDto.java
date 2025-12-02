@@ -123,17 +123,30 @@ public class ScheduleDto {
         private String type;
         private String color;
 
+        // 추가된 필드
+        private Long userId;
+        private String userName;
+
         public ScheduleInfo() {}
 
-        public ScheduleInfo(Long scheduleId, String title,
-                            LocalDateTime startDateTime, LocalDateTime endDateTime,
-                            String type, String color) {
+        public ScheduleInfo(
+                Long scheduleId,
+                String title,
+                LocalDateTime startDateTime,
+                LocalDateTime endDateTime,
+                String type,
+                String color,
+                Long userId,
+                String userName
+        ) {
             this.scheduleId = scheduleId;
             this.title = title;
             this.startDateTime = startDateTime;
             this.endDateTime = endDateTime;
             this.type = type;
             this.color = color;
+            this.userId = userId;
+            this.userName = userName;
         }
 
         public Long getScheduleId() { return scheduleId; }
@@ -153,6 +166,12 @@ public class ScheduleDto {
 
         public String getColor() { return color; }
         public void setColor(String color) { this.color = color; }
+
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+
+        public String getUserName() { return userName; }
+        public void setUserName(String userName) { this.userName = userName; }
     }
 
     public static class MonthlyScheduleResponse {
@@ -172,19 +191,32 @@ public class ScheduleDto {
     // 4) 일 조회 DTO
     // =========================
     public static class DailyScheduleInfo {
+
         private Long scheduleId;
         private String title;
         private LocalDateTime startDateTime;
         private LocalDateTime endDateTime;
 
+
+        private Long userId;
+        private String userName;
+
         public DailyScheduleInfo() {}
 
-        public DailyScheduleInfo(Long scheduleId, String title,
-                                 LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        public DailyScheduleInfo(
+                Long scheduleId,
+                String title,
+                LocalDateTime startDateTime,
+                LocalDateTime endDateTime,
+                Long userId,
+                String userName
+        ) {
             this.scheduleId = scheduleId;
             this.title = title;
             this.startDateTime = startDateTime;
             this.endDateTime = endDateTime;
+            this.userId = userId;
+            this.userName = userName;
         }
 
         public Long getScheduleId() { return scheduleId; }
@@ -198,6 +230,12 @@ public class ScheduleDto {
 
         public LocalDateTime getEndDateTime() { return endDateTime; }
         public void setEndDateTime(LocalDateTime endDateTime) { this.endDateTime = endDateTime; }
+
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+
+        public String getUserName() { return userName; }
+        public void setUserName(String userName) { this.userName = userName; }
     }
 
     public static class DailyScheduleResponse {

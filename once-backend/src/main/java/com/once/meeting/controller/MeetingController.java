@@ -2,6 +2,7 @@ package com.once.meeting.controller;
 
 import com.once.auth.domain.CustomUserDetails;
 import com.once.meeting.dto.MeetingCreateRequest;
+import com.once.meeting.dto.MeetingUpdateRequest;
 import com.once.meeting.dto.MeetingResponse;
 import com.once.meeting.service.MeetingService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,17 @@ public class MeetingController {
 
     private final MeetingService meetingService;
 
+    // ========================================
+    // 모임 목록 조회
+    // ========================================
+    @GetMapping
+    public ResponseEntity<?> getMeetings(@PathVariable Long groupId) {
+        return ResponseEntity.ok(meetingService.getMeetings(groupId));
+    }
+
+    // ========================================
     // 모임 생성
+    // ========================================
     @PostMapping
     public ResponseEntity<MeetingResponse> createMeeting(
             @PathVariable Long groupId,
@@ -24,12 +35,30 @@ public class MeetingController {
             @RequestBody MeetingCreateRequest request
     ) {
         Long userId = user.getId();
-
         MeetingResponse response = meetingService.createMeeting(groupId, userId, request);
         return ResponseEntity.ok(response);
     }
 
-    // 모임 삭제 (creator 전용)
+    // ========================================
+    // 모임 수정 (creator만 수정 가능)
+    // ========================================
+    @PutMapping("/{meetingId}")
+    public ResponseEntity<MeetingResponse> updateMeeting(
+            @PathVariable Long groupId,
+            @PathVariable Long meetingId,
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody MeetingUpdateRequest request
+    ) {
+        Long userId = user.getId();
+        MeetingResponse response =
+                meetingService.updateMeeting(groupId, meetingId, userId, request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ========================================
+    // 모임 삭제 (creator만 삭제 가능)
+    // ========================================
     @DeleteMapping("/{meetingId}")
     public ResponseEntity<String> deleteMeeting(
             @PathVariable Long groupId,
@@ -37,7 +66,6 @@ public class MeetingController {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         Long userId = user.getId();
-
         meetingService.deleteMeeting(groupId, meetingId, userId);
         return ResponseEntity.ok("모임이 취소되었습니다.");
     }
