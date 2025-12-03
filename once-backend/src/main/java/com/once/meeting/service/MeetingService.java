@@ -9,6 +9,8 @@ import com.once.meeting.dto.MeetingUpdateRequest;
 import com.once.meeting.dto.MeetingResponse;
 import com.once.meeting.repository.MeetingParticipantRepository;
 import com.once.meeting.repository.MeetingRepository;
+import com.once.user.domain.User;
+import com.once.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +24,24 @@ public class MeetingService {
     private final MeetingRepository meetingRepository;
     private final MeetingParticipantRepository participantRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final UserRepository userRepository;
+
+
+
+    // username 또는 nickname으로 이름 반환 (nickname 우선)
+    private String resolveName(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> u.getNickname() != null ? u.getNickname() : u.getUsername())
+                .orElse("unknown");
+    }
+
+
 
     // ========================================
     // 모임 생성
     // ========================================
     public MeetingResponse createMeeting(Long groupId, Long creatorId, MeetingCreateRequest req) {
 
-        // 그룹 멤버 여부 확인
         if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, creatorId)) {
             throw new RuntimeException("그룹 멤버가 아닙니다.");
         }
@@ -38,7 +51,6 @@ public class MeetingService {
         String time = req.getTime();
 
         if (start == null) throw new RuntimeException("startDate는 필수입니다.");
-
         if (end == null) end = start;
         if (!start.equals(end)) time = null;
 
@@ -55,7 +67,7 @@ public class MeetingService {
 
         Meeting saved = meetingRepository.save(meeting);
 
-        // 생성자는 자동 참여 ACCEPTED
+        // 작성자는 자동 ACCEPTED
         participantRepository.save(
                 MeetingParticipant.builder()
                         .meetingId(saved.getId())
@@ -66,12 +78,13 @@ public class MeetingService {
 
         int count = participantRepository.countByMeetingIdAndStatus(saved.getId(), ParticipationStatus.ACCEPTED);
 
-        // creator = 무조건 ACCEPTED
-        return MeetingResponse.from(saved, count, ParticipationStatus.ACCEPTED.name());
+        return MeetingResponse.from(saved, count, ParticipationStatus.ACCEPTED.name(), List.of(), List.of());
     }
 
+
+
     // ========================================
-    // 모임 목록 조회 (myStatus 포함)
+    // 모임 목록 조회 (참여자 이름 포함)
     // ========================================
     public List<MeetingResponse> getMeetings(Long groupId, Long userId) {
 
@@ -80,25 +93,42 @@ public class MeetingService {
         return meetings.stream()
                 .map(m -> {
 
-                    // 참여 인원 수 (ACCEPTED만 카운트)
-                    int count = participantRepository.countByMeetingIdAndStatus(
+                    int participantCount = participantRepository.countByMeetingIdAndStatus(
                             m.getId(),
                             ParticipationStatus.ACCEPTED
                     );
 
-                    // 현재 로그인한 유저의 참여 상태
-                    String myStatus = participantRepository
-                            .findByMeetingIdAndUserId(m.getId(), userId)
-                            .map(p -> p.getStatus().name())   // ACCEPTED or DECLINED
-                            .orElse(null);                    // 참여 안 했으면 null
+                    String myStatus = participantRepository.findByMeetingIdAndUserId(m.getId(), userId)
+                            .map(p -> p.getStatus().name())
+                            .orElse(null);
 
-                    return MeetingResponse.from(m, count, myStatus);
+                    List<String> participants = participantRepository
+                            .findByMeetingIdAndStatus(m.getId(), ParticipationStatus.ACCEPTED)
+                            .stream()
+                            .map(p -> resolveName(p.getUserId()))
+                            .toList();
+
+                    List<String> declined = participantRepository
+                            .findByMeetingIdAndStatus(m.getId(), ParticipationStatus.DECLINED)
+                            .stream()
+                            .map(p -> resolveName(p.getUserId()))
+                            .toList();
+
+                    return MeetingResponse.from(
+                            m,
+                            participantCount,
+                            myStatus,
+                            participants,
+                            declined
+                    );
                 })
                 .toList();
     }
 
+
+
     // ========================================
-    // 모임 수정 (creator만 가능)
+    // 모임 수정
     // ========================================
     public MeetingResponse updateMeeting(
             Long groupId,
@@ -122,10 +152,7 @@ public class MeetingService {
         LocalDate end = req.getEndDate();
         String time = req.getTime();
 
-        if (start == null) {
-            throw new RuntimeException("startDate는 필수입니다.");
-        }
-
+        if (start == null) throw new RuntimeException("startDate는 필수입니다.");
         if (end == null) end = start;
         if (!start.equals(end)) time = null;
 
@@ -140,17 +167,30 @@ public class MeetingService {
 
         int count = participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.ACCEPTED);
 
-        // 업데이트 후도 로그인 유저의 참여 상태 다시 계산
         String myStatus = participantRepository
                 .findByMeetingIdAndUserId(meetingId, userId)
                 .map(p -> p.getStatus().name())
                 .orElse(null);
 
-        return MeetingResponse.from(updated, count, myStatus);
+        List<String> participants = participantRepository
+                .findByMeetingIdAndStatus(meetingId, ParticipationStatus.ACCEPTED)
+                .stream()
+                .map(p -> resolveName(p.getUserId()))
+                .toList();
+
+        List<String> declined = participantRepository
+                .findByMeetingIdAndStatus(meetingId, ParticipationStatus.DECLINED)
+                .stream()
+                .map(p -> resolveName(p.getUserId()))
+                .toList();
+
+        return MeetingResponse.from(updated, count, myStatus, participants, declined);
     }
 
+
+
     // ========================================
-    // 모임 삭제 (creator만 가능)
+    // 모임 삭제
     // ========================================
     public void deleteMeeting(Long groupId, Long meetingId, Long userId) {
 

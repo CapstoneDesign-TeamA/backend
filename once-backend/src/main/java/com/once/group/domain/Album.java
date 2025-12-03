@@ -1,8 +1,7 @@
 package com.once.group.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -10,6 +9,9 @@ import java.time.LocalDateTime;
 @Table(name = "album_table")
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder   // ← 반드시 추가!!
 public class Album {
 
     @Id
@@ -17,8 +19,10 @@ public class Album {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false) // 그룹 필수
+    @JoinColumn(name = "group_id", nullable = false)
     private Group group;
+
+    private Long meetingId;  // 후기 앨범인 경우만 사용
 
     private String title;
     private String description;

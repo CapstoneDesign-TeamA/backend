@@ -9,11 +9,18 @@ import java.util.Optional;
 
 public interface MeetingParticipantRepository extends JpaRepository<MeetingParticipant, Long> {
 
+
     List<MeetingParticipant> findByMeetingId(Long meetingId);
+
 
     Optional<MeetingParticipant> findByMeetingIdAndUserId(Long meetingId, Long userId);
 
+
     int countByMeetingIdAndStatus(Long meetingId, ParticipationStatus status);
 
+
     void deleteByMeetingId(Long meetingId);
+
+
+    List<MeetingParticipant> findByMeetingIdAndStatus(Long meetingId, ParticipationStatus status);
 }

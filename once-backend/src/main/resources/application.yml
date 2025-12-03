@@ -6,14 +6,11 @@ spring:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASS}
-    #url: jdbc:mysql://localhost:3306/sharedcalendar?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
-    #username: root
-    #password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update   # 개발 중엔 update, 운영은 validate 권장
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
@@ -26,6 +23,12 @@ spring:
     default-property-inclusion: non_null
     time-zone: UTC
 
+  servlet:
+    multipart:
+      max-file-size: 50MB        # 파일 하나 최대 크기
+      max-request-size: 200MB    # 요청 전체 크기 (여러 파일 포함)
+      enabled: true
+
 server:
   port: 8080
 
@@ -34,7 +37,6 @@ logging:
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-
 
 jwt:
   secret: your-jwt-secret-key-here-make-it-very-long-and-secure

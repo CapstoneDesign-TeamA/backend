@@ -4,6 +4,8 @@ import com.once.meeting.domain.Meeting;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class MeetingResponse {
@@ -19,38 +21,51 @@ public class MeetingResponse {
     private String time;
     private String location;
 
+    // 참여 인원 수 (ACCEPTED만)
     private int participantCount;
 
-    // ★ 추가된 필드
-    private String myStatus;   // "ACCEPTED" | "DECLINED" | null
+    // 현재 로그인 유저의 참여 상태 (ACCEPTED | DECLINED | null)
+    private String myStatus;
 
-    // ★ myStatus까지 포함한 새로운 팩토리 메서드
+    // 참여자 / 불참자 이름 목록 (nickname 우선, 없으면 username)
+    private List<String> participants;
+    private List<String> declined;
+
+    /**
+     * MeetingResponse 팩토리 메서드
+     */
     public static MeetingResponse from(
             Meeting meeting,
             int participantCount,
-            String myStatus
+            String myStatus,
+            List<String> participants,
+            List<String> declined
     ) {
         MeetingResponse res = new MeetingResponse();
 
-        res.setId(meeting.getId());
-        res.setGroupId(meeting.getGroupId());
-        res.setCreatorId(meeting.getCreatorId());
-        res.setTitle(meeting.getTitle());
-        res.setDescription(meeting.getDescription());
+        res.id = meeting.getId();
+        res.groupId = meeting.getGroupId();
+        res.creatorId = meeting.getCreatorId();
+        res.title = meeting.getTitle();
+        res.description = meeting.getDescription();
 
-        res.setStartDate(
-                meeting.getStartDate() != null ? meeting.getStartDate().toString() : null
-        );
-        res.setEndDate(
-                meeting.getEndDate() != null ? meeting.getEndDate().toString() : null
-        );
+        res.startDate = meeting.getStartDate() != null
+                ? meeting.getStartDate().toString()
+                : null;
 
-        res.setTime(meeting.getTime());
-        res.setLocation(meeting.getLocation());
-        res.setParticipantCount(participantCount);
+        res.endDate = meeting.getEndDate() != null
+                ? meeting.getEndDate().toString()
+                : null;
 
-        // ★ 추가
-        res.setMyStatus(myStatus);
+        res.time = meeting.getTime();
+        res.location = meeting.getLocation();
+
+        res.participantCount = participantCount;
+        res.myStatus = myStatus;
+
+        // 참여/불참자
+        res.participants = participants;
+        res.declined = declined;
 
         return res;
     }
