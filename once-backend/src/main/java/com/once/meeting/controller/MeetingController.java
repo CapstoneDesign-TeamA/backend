@@ -18,11 +18,17 @@ public class MeetingController {
     private final MeetingService meetingService;
 
     // ========================================
-    // 모임 목록 조회
+    // 모임 목록 조회 (myStatus 포함)
     // ========================================
     @GetMapping
-    public ResponseEntity<?> getMeetings(@PathVariable Long groupId) {
-        return ResponseEntity.ok(meetingService.getMeetings(groupId));
+    public ResponseEntity<?> getMeetings(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        Long userId = user.getId();
+        return ResponseEntity.ok(
+                meetingService.getMeetings(groupId, userId)
+        );
     }
 
     // ========================================
@@ -40,7 +46,7 @@ public class MeetingController {
     }
 
     // ========================================
-    // 모임 수정 (creator만 수정 가능)
+    // 모임 수정 (creator만 가능)
     // ========================================
     @PutMapping("/{meetingId}")
     public ResponseEntity<MeetingResponse> updateMeeting(
@@ -57,7 +63,7 @@ public class MeetingController {
     }
 
     // ========================================
-    // 모임 삭제 (creator만 삭제 가능)
+    // 모임 삭제 (creator만 가능)
     // ========================================
     @DeleteMapping("/{meetingId}")
     public ResponseEntity<String> deleteMeeting(

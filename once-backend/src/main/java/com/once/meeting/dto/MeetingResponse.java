@@ -14,14 +14,22 @@ public class MeetingResponse {
     private String title;
     private String description;
 
-    private String startDate;  // 프론트는 String으로 받기 때문에 유지
+    private String startDate;
     private String endDate;
     private String time;
     private String location;
 
     private int participantCount;
 
-    public static MeetingResponse from(Meeting meeting, int participantCount) {
+    // ★ 추가된 필드
+    private String myStatus;   // "ACCEPTED" | "DECLINED" | null
+
+    // ★ myStatus까지 포함한 새로운 팩토리 메서드
+    public static MeetingResponse from(
+            Meeting meeting,
+            int participantCount,
+            String myStatus
+    ) {
         MeetingResponse res = new MeetingResponse();
 
         res.setId(meeting.getId());
@@ -40,6 +48,9 @@ public class MeetingResponse {
         res.setTime(meeting.getTime());
         res.setLocation(meeting.getLocation());
         res.setParticipantCount(participantCount);
+
+        // ★ 추가
+        res.setMyStatus(myStatus);
 
         return res;
     }

@@ -28,6 +28,7 @@ public class MeetingService {
     // ========================================
     public MeetingResponse createMeeting(Long groupId, Long creatorId, MeetingCreateRequest req) {
 
+        // 그룹 멤버 여부 확인
         if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, creatorId)) {
             throw new RuntimeException("그룹 멤버가 아닙니다.");
         }
@@ -54,6 +55,7 @@ public class MeetingService {
 
         Meeting saved = meetingRepository.save(meeting);
 
+        // 생성자는 자동 참여 ACCEPTED
         participantRepository.save(
                 MeetingParticipant.builder()
                         .meetingId(saved.getId())
@@ -64,22 +66,33 @@ public class MeetingService {
 
         int count = participantRepository.countByMeetingIdAndStatus(saved.getId(), ParticipationStatus.ACCEPTED);
 
-        return MeetingResponse.from(saved, count);
+        // creator = 무조건 ACCEPTED
+        return MeetingResponse.from(saved, count, ParticipationStatus.ACCEPTED.name());
     }
 
     // ========================================
-    // 모임 목록 조회
+    // 모임 목록 조회 (myStatus 포함)
     // ========================================
-    public List<MeetingResponse> getMeetings(Long groupId) {
+    public List<MeetingResponse> getMeetings(Long groupId, Long userId) {
 
         List<Meeting> meetings = meetingRepository.findByGroupId(groupId);
 
         return meetings.stream()
                 .map(m -> {
+
+                    // 참여 인원 수 (ACCEPTED만 카운트)
                     int count = participantRepository.countByMeetingIdAndStatus(
-                            m.getId(), ParticipationStatus.ACCEPTED
+                            m.getId(),
+                            ParticipationStatus.ACCEPTED
                     );
-                    return MeetingResponse.from(m, count);
+
+                    // 현재 로그인한 유저의 참여 상태
+                    String myStatus = participantRepository
+                            .findByMeetingIdAndUserId(m.getId(), userId)
+                            .map(p -> p.getStatus().name())   // ACCEPTED or DECLINED
+                            .orElse(null);                    // 참여 안 했으면 null
+
+                    return MeetingResponse.from(m, count, myStatus);
                 })
                 .toList();
     }
@@ -87,7 +100,12 @@ public class MeetingService {
     // ========================================
     // 모임 수정 (creator만 가능)
     // ========================================
-    public MeetingResponse updateMeeting(Long groupId, Long meetingId, Long userId, MeetingUpdateRequest req) {
+    public MeetingResponse updateMeeting(
+            Long groupId,
+            Long meetingId,
+            Long userId,
+            MeetingUpdateRequest req
+    ) {
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new RuntimeException("모임을 찾을 수 없습니다."));
@@ -122,7 +140,13 @@ public class MeetingService {
 
         int count = participantRepository.countByMeetingIdAndStatus(meetingId, ParticipationStatus.ACCEPTED);
 
-        return MeetingResponse.from(updated, count);
+        // 업데이트 후도 로그인 유저의 참여 상태 다시 계산
+        String myStatus = participantRepository
+                .findByMeetingIdAndUserId(meetingId, userId)
+                .map(p -> p.getStatus().name())
+                .orElse(null);
+
+        return MeetingResponse.from(updated, count, myStatus);
     }
 
     // ========================================

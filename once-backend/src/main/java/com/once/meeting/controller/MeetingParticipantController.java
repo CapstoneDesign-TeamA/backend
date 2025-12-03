@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/groups/{groupId}/meetings/{meetingId}")
@@ -18,23 +19,31 @@ public class MeetingParticipantController {
     private final MeetingParticipantService participantService;
 
     @PostMapping("/participate")
-    public ResponseEntity<String> participate(
+    public ResponseEntity<?> participate(
             @PathVariable Long groupId,
             @PathVariable Long meetingId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         participantService.accept(groupId, meetingId, user.getId());
-        return ResponseEntity.ok("참여 완료");
+
+        // ★ JSON 응답으로 변경
+        return ResponseEntity.ok(Map.of(
+                "message", "참여 완료"
+        ));
     }
 
     @PostMapping("/decline")
-    public ResponseEntity<String> decline(
+    public ResponseEntity<?> decline(
             @PathVariable Long groupId,
             @PathVariable Long meetingId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         participantService.decline(groupId, meetingId, user.getId());
-        return ResponseEntity.ok("불참 처리 완료");
+
+        // ★ JSON 응답으로 변경
+        return ResponseEntity.ok(Map.of(
+                "message", "불참 처리 완료"
+        ));
     }
 
     @GetMapping("/participants")
