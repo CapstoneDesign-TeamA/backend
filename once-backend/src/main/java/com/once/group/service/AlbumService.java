@@ -1,5 +1,6 @@
 package com.once.group.service;
 
+import com.once.ai.service.AiService;
 import com.once.group.domain.Album;
 import com.once.group.domain.Group;
 import com.once.group.dto.AlbumResponse;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,58 +21,70 @@ public class AlbumService {
 
     private final AlbumRepository albumRepository;
     private final GroupRepository groupRepository;
+    private final AiService aiService;
+    private final GroupActivityCategoryService groupActivityCategoryService;
 
-    /**
-     * 앨범 생성
-     * - 이미지는 컨트롤러에서 업로드하고, 여기서는 imageUrl 문자열만 받아서 저장
-     */
+    // ============================================================
+    // 앨범 생성 + AI 카테고리 → group_activity_category 저장
+    // ============================================================
     public AlbumResponse createAlbum(Long groupId, String title, String description, String imageUrl) {
+
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
 
-        Album album = new Album();
-        album.setGroup(group);
-        album.setTitle(title);
-        album.setDescription(description);
-        album.setImageUrl(imageUrl);
-        album.setCreatedAt(LocalDateTime.now()); // 엔티티에서 자동 세팅 안 하면 유지
+        // AI 이미지 분석 → 그룹 활동 기록만 남김
+        String aiCategory = analyzeCategory(imageUrl);
+        if (aiCategory != null) {
+            groupActivityCategoryService.recordCategory(groupId, 0L, aiCategory);
+        }
+
+        Album album = Album.builder()
+                .group(group)
+                .title(title)
+                .description(description)
+                .imageUrl(imageUrl)
+                .createdAt(LocalDateTime.now())
+                .build();
 
         Album saved = albumRepository.save(album);
         return toResponse(saved);
     }
 
-    /**
-     * 그룹별 앨범 목록 조회
-     */
+    // ============================================================
+    // 그룹별 앨범 목록 조회
+    // ============================================================
     public List<AlbumResponse> getAlbumsByGroup(Long groupId) {
-        List<Album> albums = albumRepository.findByGroupId(groupId);
-
-        return albums.stream()
+        return albumRepository.findByGroupId(groupId)
+                .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 앨범 수정
-     * - title / description / imageUrl 중 null이 아닌 값만 변경
-     */
+    // ============================================================
+    // 앨범 수정 (이미지 변경 시에만 그룹 활동 카테고리 기록)
+    // ============================================================
     public AlbumResponse updateAlbum(Long groupId, Long albumId,
                                      String title, String description, String imageUrl) {
 
         Album album = albumRepository.findById(albumId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 앨범입니다."));
 
-        if (album.getGroup() == null || !album.getGroup().getId().equals(groupId)) {
+        if (!album.getGroup().getId().equals(groupId)) {
             throw new EntityNotFoundException("이 앨범은 해당 그룹에 속하지 않습니다.");
         }
 
-        if (title != null) {
-            album.setTitle(title);
-        }
-        if (description != null) {
-            album.setDescription(description);
-        }
-        if (imageUrl != null) {
+        if (title != null) album.setTitle(title);
+        if (description != null) album.setDescription(description);
+
+        // 이미지가 바뀐 경우에만 AI 재분석 + group_activity 기록
+        if (imageUrl != null && !imageUrl.equals(album.getImageUrl())) {
+
+            String aiCategory = analyzeCategory(imageUrl);
+
+            if (aiCategory != null) {
+                groupActivityCategoryService.recordCategory(groupId, 0L, aiCategory);
+            }
+
             album.setImageUrl(imageUrl);
         }
 
@@ -78,23 +92,35 @@ public class AlbumService {
         return toResponse(updated);
     }
 
-    /**
-     * 앨범 삭제
-     */
+    // ============================================================
+    // 앨범 삭제
+    // ============================================================
     public void deleteAlbum(Long groupId, Long albumId) {
         Album album = albumRepository.findById(albumId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 앨범입니다."));
 
-        if (album.getGroup() == null || !album.getGroup().getId().equals(groupId)) {
+        if (!album.getGroup().getId().equals(groupId)) {
             throw new EntityNotFoundException("이 앨범은 해당 그룹에 속하지 않습니다.");
         }
 
         albumRepository.delete(album);
     }
 
-    /**
-     * 공통 DTO 매핑
-     */
+    // ============================================================
+    // AI 이미지 분석 (중복 제거)
+    // ============================================================
+    private String analyzeCategory(String imageUrl) {
+        try {
+            Map<String, Object> resp = aiService.analyzeImageUrl(Map.of("image_url", imageUrl));
+            return resp != null ? (String) resp.get("category") : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ============================================================
+    // DTO 변환 (aiCategory 없음)
+    // ============================================================
     private AlbumResponse toResponse(Album album) {
         AlbumResponse res = new AlbumResponse();
         res.setAlbumId(album.getId());

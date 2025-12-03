@@ -16,8 +16,7 @@ public class PostResponse {
     private Long groupId;
     private Long userId;
 
-    private String nickname;       // 사용자 닉네임
-    // private String profileImg;  // TODO: 프로필 이미지 도입 후 활성화
+    private String nickname;
 
     private String type;
     private String content;
@@ -25,24 +24,27 @@ public class PostResponse {
 
     private Long meetingId;
 
+
     private List<String> images;
 
     private int likeCount;
     private boolean myLiked;
-
     private int commentCount;
 
     private String aiKeywords;
     private String aiSentiment;
     private String aiSummary;
 
+
+    private List<String> aiCategories;
+
     public static PostResponse from(
             Post post,
-            User user,                     // 사용자 정보
+            User user,
             List<PostImage> images,
             int likeCount,
             boolean myLiked,
-            int commentCount               // ★ 댓글 개수도 파라미터로 전달받음
+            int commentCount
     ) {
 
         PostResponse res = new PostResponse();
@@ -50,10 +52,7 @@ public class PostResponse {
         res.setId(post.getId());
         res.setGroupId(post.getGroupId());
         res.setUserId(post.getUserId());
-
-        // 사용자 정보
         res.setNickname(user.getNickname());
-        // res.setProfileImg(user.getProfileImg());
 
         res.setType(post.getType().name());
         res.setContent(post.getContent());
@@ -64,12 +63,17 @@ public class PostResponse {
         res.setAiSentiment(post.getAiSentiment());
         res.setAiSummary(post.getAiSummary());
 
+        // URL 리스트만 프론트에 전달 → 사진 안 깨짐
         res.setImages(images.stream().map(PostImage::getImageUrl).toList());
+
+        // AI 카테고리 리스트는 별도 전달
+        res.setAiCategories(images.stream()
+                .map(PostImage::getAiCategory)
+                .toList()
+        );
 
         res.setLikeCount(likeCount);
         res.setMyLiked(myLiked);
-
-        // ★ 댓글 개수 설정
         res.setCommentCount(commentCount);
 
         return res;

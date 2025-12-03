@@ -1,5 +1,7 @@
 package com.once.post.service;
 
+import com.once.ai.service.AiService;
+import com.once.group.service.GroupActivityCategoryService;
 import com.once.meeting.domain.Meeting;
 import com.once.meeting.repository.MeetingRepository;
 import com.once.post.domain.Post;
@@ -27,6 +29,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -42,6 +45,9 @@ public class PostService {
     private final ImageUploadService imageUploadService;
     private final UserRepository userRepository;
 
+    private final AiService aiService;
+    private final GroupActivityCategoryService groupActivityCategoryService;
+
     // ============================================================
     // 게시글 생성
     // ============================================================
@@ -55,7 +61,6 @@ public class PostService {
             List<MultipartFile> files
     ) throws IOException {
 
-        // 후기 검증
         if (type.equals("MEETING_REVIEW")) {
 
             if (meetingId == null) throw new RuntimeException("meetingId가 필요합니다.");
@@ -70,7 +75,6 @@ public class PostService {
                 throw new RuntimeException("모임 종료 후에만 후기를 작성할 수 있습니다.");
         }
 
-        // Post 저장
         Post post = Post.builder()
                 .groupId(groupId)
                 .userId(userId)
@@ -82,17 +86,28 @@ public class PostService {
 
         Post saved = postRepository.save(post);
 
-        // 이미지 업로드
         int idx = 0;
+
         if (files != null) {
             for (MultipartFile file : files) {
                 if (file != null && !file.isEmpty()) {
 
-                    String uploaded = imageUploadService.uploadImage(file);
+                    String uploadedUrl = imageUploadService.uploadImage(file);
+
+                    String aiCategory = null;
+                    try {
+                        Map aiResponse = aiService.analyzeImageUrl(Map.of("image_url", uploadedUrl));
+                        aiCategory = aiResponse != null ? (String) aiResponse.get("category") : null;
+
+                        if (aiCategory != null) {
+                            groupActivityCategoryService.recordCategory(groupId, userId, aiCategory);
+                        }
+
+                    } catch (Exception ignored) {}
 
                     PostImage img = PostImage.builder()
                             .postId(saved.getId())
-                            .imageUrl(uploaded)
+                            .imageUrl(uploadedUrl)
                             .orderIndex(idx++)
                             .build();
 
@@ -101,7 +116,6 @@ public class PostService {
             }
         }
 
-        // PostResponse 생성
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -164,7 +178,7 @@ public class PostService {
 
 
     // ============================================================
-    // 게시글 수정
+    // 게시글 수정 (★ newImages → AI 분석 + group_activity_category 저장 추가)
     // ============================================================
     @Transactional
     public PostResponse updatePost(
@@ -197,7 +211,6 @@ public class PostService {
             }
         }
 
-        // 재조회 후 재정렬
         List<PostImage> remain = postImageRepository.findByPostIdOrderByOrderIndexAsc(postId);
 
         int idx = 0;
@@ -205,19 +218,33 @@ public class PostService {
             img.setOrderIndex(idx++);
         }
 
-        // 새 이미지 추가
+        // ============================================================
+        // ★ newImages 추가 시 AI 분석 로직 추가
+        // ============================================================
         if (req.getNewImages() != null) {
             for (String url : req.getNewImages()) {
+
+                // AI 카테고리 분석
+                try {
+                    Map aiResponse = aiService.analyzeImageUrl(Map.of("image_url", url));
+                    String aiCategory = aiResponse != null ? (String) aiResponse.get("category") : null;
+
+                    if (aiCategory != null) {
+                        groupActivityCategoryService.recordCategory(groupId, userId, aiCategory);
+                    }
+                } catch (Exception ignored) {}
+
+                // 이미지 저장
                 PostImage img = PostImage.builder()
                         .postId(postId)
                         .imageUrl(url)
                         .orderIndex(idx++)
                         .build();
+
                 postImageRepository.save(img);
             }
         }
 
-        // 최종 반환
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -233,7 +260,7 @@ public class PostService {
 
 
     // ============================================================
-    // 좋아요 토글
+    // 좋아요 토글 (★ user 객체를 요청자 userId 기준으로 변경)
     // ============================================================
     @Transactional
     public PostResponse toggleLike(Long groupId, Long postId, Long userId) {
@@ -257,8 +284,10 @@ public class PostService {
             );
         }
 
-        // PostResponse 리턴 준비
-        User user = userRepository.findById(post.getUserId())
+        // ================================
+        // ★ user = 요청자 userId 로 변경됨
+        // ================================
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         List<PostImage> imgs =

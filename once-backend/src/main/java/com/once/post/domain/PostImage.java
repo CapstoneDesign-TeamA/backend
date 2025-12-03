@@ -23,4 +23,6 @@ public class PostImage {
     private String imageUrl;
 
     private int orderIndex;
+
+    private String aiCategory;
 }
