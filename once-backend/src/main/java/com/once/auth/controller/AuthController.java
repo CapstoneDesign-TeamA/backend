@@ -59,7 +59,10 @@ public class AuthController {
 
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", user.getId());
-        userInfo.put("name", user.getUsername());
+        // 실제 이름(name)이 있으면 그 값을 사용하고, 없으면 username을 fallback으로 사용
+        userInfo.put("name", user.getName() != null && !user.getName().isEmpty() ? user.getName() : user.getUsername());
+        // 닉네임(nickname) 필드 추가
+        userInfo.put("nickname", user.getNickname() != null ? user.getNickname() : "");
         userInfo.put("email", user.getEmail());
 
         response.put("user", userInfo);

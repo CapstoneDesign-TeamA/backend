@@ -16,10 +16,20 @@ public class ProfileUpdateRequest {
     @NotEmpty(message = "관심사는 최소 1개 이상 선택해야 합니다.")
     private List<String> interests;
 
+    private String name;
+
+    private String profileImage;
+
     // Getters and Setters
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
 
     public List<String> getInterests() { return interests; }
     public void setInterests(List<String> interests) { this.interests = interests; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getProfileImage() { return profileImage; }
+    public void setProfileImage(String profileImage) { this.profileImage = profileImage; }
 }

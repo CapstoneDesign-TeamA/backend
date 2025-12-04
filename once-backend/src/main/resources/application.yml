@@ -34,7 +34,9 @@ server:
 
 logging:
   level:
+    com.once: DEBUG
     org.springframework.security: INFO
+    org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 

@@ -49,7 +49,7 @@ public interface UserMapper {
 
 
     // 프로필 관련
-    @Update("UPDATE users SET nickname = #{nickname}, updated_at = NOW() WHERE id = #{id}")
+    @Update("UPDATE users SET nickname = #{nickname}, name = #{name}, profile_image = #{profileImage}, updated_at = NOW() WHERE id = #{id}")
     void updateUserProfile(User user);
 
     @Delete("DELETE FROM user_interests WHERE user_id = #{userId}")

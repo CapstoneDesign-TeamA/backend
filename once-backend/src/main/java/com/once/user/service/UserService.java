@@ -3,10 +3,14 @@ package com.once.user.service;
 import ch.qos.logback.classic.Logger;
 import com.once.config.ClientInfoUtil;
 import com.once.auth.dto.SignupRequest;
+import com.once.user.dto.UserProfileUpdateRequest;
+import com.once.user.dto.UserProfileUpdateResponse;
+import com.once.user.dto.UserResponse;
 import com.once.user.mapper.UserMapper;
 import com.once.user.domain.TermsAgreement;
 import com.once.user.domain.User;
 import com.once.user.domain.UserActivityLog;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +40,7 @@ public class UserService {
     public boolean isNicknameExists(String nickname) {
         return userMapper.findByNickname(nickname).isPresent();
     }
+
     public Optional<User> findById(Long id) {
         return userMapper.findById(id);
     }
@@ -51,9 +56,13 @@ public class UserService {
 
         userMapper.insertUser(user);
 
-        // 관심사 저장
-        for (String interest : signupRequest.getInterests()) {
-            userMapper.insertUserInterest(user.getId(), interest);
+        // 관심사 저장 (null 체크 추가)
+        if (signupRequest.getInterests() != null && !signupRequest.getInterests().isEmpty()) {
+            for (String interest : signupRequest.getInterests()) {
+                if (interest != null && !interest.trim().isEmpty()) {
+                    userMapper.insertUserInterest(user.getId(), interest.trim());
+                }
+            }
         }
 
         // 약관 동의 저장
@@ -99,6 +108,50 @@ public class UserService {
     @Transactional
     public void deactivateUser(Long userId) {
         userMapper.deactivateUser(userId);
+    }
+
+    // 프로필 조회
+    public UserResponse getUserById(Long userId) {
+        User user = userMapper.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다"));
+
+        return UserResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .profileImage(user.getProfileImage())
+                .build();
+    }
+
+    // 프로필 업데이트
+    @Transactional
+    public UserProfileUpdateResponse updateProfile(
+            Long userId,
+            UserProfileUpdateRequest request
+    ) {
+        User user = userMapper.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다"));
+
+        // 이름 업데이트 (null이 아닌 경우)
+        if (request.getName() != null) {
+            user.setName(request.getName());
+        }
+
+        // 프로필 이미지 업데이트 (null이 아닌 경우)
+        if (request.getProfileImage() != null) {
+            user.setProfileImage(request.getProfileImage());
+        }
+
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateUserProfile(user);
+
+        return UserProfileUpdateResponse.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .profileImage(user.getProfileImage())
+                .message("프로필이 업데이트되었습니다")
+                .build();
     }
 
     // 활동 로그 기록 메서드

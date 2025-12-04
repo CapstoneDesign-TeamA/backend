@@ -29,6 +29,12 @@ public class User {
 
     private String nickname;
 
+    @Column(length = 255)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String profileImage;
+
     private String status;
 
     private LocalDateTime createdAt;

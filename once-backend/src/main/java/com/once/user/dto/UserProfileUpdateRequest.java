@@ -1,0 +1,10 @@
+package com.once.user.dto;
+
+import lombok.Data;
+
+@Data
+public class UserProfileUpdateRequest {
+    private String name;
+    private String profileImage;
+}
+
