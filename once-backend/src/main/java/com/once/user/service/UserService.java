@@ -47,6 +47,8 @@ public class UserService {
 
     @Transactional
     public User createUser(SignupRequest signupRequest) {
+        Logger logger = (Logger) LoggerFactory.getLogger(UserService.class);
+
         // User 생성
         User user = new User();
         user.setUsername(signupRequest.getUsername());
@@ -54,19 +56,34 @@ public class UserService {
         user.setEmail(signupRequest.getEmail());
         user.setNickname(signupRequest.getNickname());
 
+        logger.info("회원가입 - 사용자 생성 시작: username={}, email={}, nickname={}",
+                    signupRequest.getUsername(), signupRequest.getEmail(), signupRequest.getNickname());
+
         userMapper.insertUser(user);
+        logger.info("회원가입 - 사용자 DB 저장 완료: userId={}", user.getId());
 
         // 관심사 저장 (null 체크 추가)
+        logger.info("회원가입 - 관심사 개수: {}",
+                    signupRequest.getInterests() != null ? signupRequest.getInterests().size() : 0);
+
         if (signupRequest.getInterests() != null && !signupRequest.getInterests().isEmpty()) {
+            logger.info("회원가입 - 관심사 목록: {}", signupRequest.getInterests());
+            int savedCount = 0;
             for (String interest : signupRequest.getInterests()) {
                 if (interest != null && !interest.trim().isEmpty()) {
+                    logger.info("회원가입 - 관심사 저장 중: userId={}, interest={}", user.getId(), interest.trim());
                     userMapper.insertUserInterest(user.getId(), interest.trim());
+                    savedCount++;
                 }
             }
+            logger.info("회원가입 - 관심사 저장 완료: userId={}, 저장된 개수={}", user.getId(), savedCount);
+        } else {
+            logger.warn("회원가입 - 관심사가 비어있음: userId={}", user.getId());
         }
 
         // 약관 동의 저장
         saveTermsAgreements(user.getId(), signupRequest.getMarketingAgreed());
+        logger.info("회원가입 - 약관 동의 저장 완료: userId={}", user.getId());
 
         return user;
     }

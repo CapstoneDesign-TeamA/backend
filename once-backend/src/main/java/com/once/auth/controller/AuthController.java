@@ -64,6 +64,8 @@ public class AuthController {
         // 닉네임(nickname) 필드 추가
         userInfo.put("nickname", user.getNickname() != null ? user.getNickname() : "");
         userInfo.put("email", user.getEmail());
+        // 프로필 이미지 추가
+        userInfo.put("profileImage", user.getProfileImage() != null ? user.getProfileImage() : "");
 
         response.put("user", userInfo);
 

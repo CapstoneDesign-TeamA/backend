@@ -78,6 +78,7 @@ public class GroupService {
 
 
     // 사용자 기준 그룹 요약 조회
+
     public List<GroupSummaryResponse> getMyGroupsSummary() {
         Long userId = SecurityUtil.getCurrentUserId();
 

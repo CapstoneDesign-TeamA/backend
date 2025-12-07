@@ -73,4 +73,19 @@ public class AiService {
                 .bodyToMono(Map.class)
                 .block();
     }
+
+    // 5) 게시글 종합 분석 (이미지 URL + 텍스트 내용)
+    public Map analyzePost(List<String> imageUrls, String content) {
+        Map<String, Object> body = Map.of(
+                "image_urls", imageUrls,
+                "content", content != null ? content : ""
+        );
+
+        return aiWebClient.post()
+                .uri("/analyze/post")
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block();
+    }
 }

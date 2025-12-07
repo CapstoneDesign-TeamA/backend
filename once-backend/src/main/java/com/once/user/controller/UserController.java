@@ -54,9 +54,10 @@ public class UserController {
             if (userService.isUsernameExists(signupRequest.getUsername())) {
                 return ResponseEntity.badRequest().body(Map.of("message", "이미 사용 중인 아이디입니다."));
             }
-            if (userService.isNicknameExists(signupRequest.getNickname())) {
-                return ResponseEntity.badRequest().body(Map.of("message", "이미 사용 중인 닉네임입니다."));
-            }
+            // 닉네임 중복 체크 제거 - 중복 허용
+            // if (userService.isNicknameExists(signupRequest.getNickname())) {
+            //     return ResponseEntity.badRequest().body(Map.of("message", "이미 사용 중인 닉네임입니다."));
+            // }
 
             User user = userService.createUser(signupRequest);
             userService.logUserActivity(user.getId(), "/signup", "사용자 생성");
@@ -148,32 +149,44 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
+            logger.info("프로필 조회 요청 - 토큰: {}", token.substring(0, Math.min(50, token.length())));
+
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
+            logger.info("토큰에서 추출한 이메일: {}", email);
+
             User user = userService.findByEmail(email);
             if (user == null) {
+                logger.warn("사용자를 찾을 수 없음: email={}", email);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
             }
+
+            logger.info("사용자 조회 성공: userId={}, nickname={}", user.getId(), user.getNickname());
 
             List<String> interestList = userMapper.findInterestsByUserId(user.getId())
                     .stream()
                     .map(UserInterest::getInterest)
                     .toList();
 
-            Map<String, Object> profile = Map.of(
-                    "id", user.getId(),
-                    "username", user.getUsername(),
-                    "email", user.getEmail(),
-                    "nickname", user.getNickname(),
-                    "name", user.getName() != null ? user.getName() : "",
-                    "profileImage", user.getProfileImage() != null ? user.getProfileImage() : "",
-                    "interests", interestList,
-                    "createdAt", user.getCreatedAt()
-            );
+            // HashMap 사용 (null 값 허용)
+            Map<String, Object> profile = new HashMap<>();
+            profile.put("id", user.getId());
+            profile.put("username", user.getUsername());
+            profile.put("email", user.getEmail());
+            profile.put("nickname", user.getNickname());
+            profile.put("name", user.getName() != null ? user.getName() : "");
+            profile.put("profileImage", user.getProfileImage() != null ? user.getProfileImage() : "");
+            profile.put("interests", interestList);
+            profile.put("createdAt", user.getCreatedAt());
 
-            return ResponseEntity.ok(Map.of("success", true, "data", profile));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", profile);
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            logger.error("프로필 조회 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "message", "인증에 실패했습니다."));
         }
@@ -199,13 +212,7 @@ public class UserController {
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
             }
 
-            // 닉네임 중복 체크 (자신 제외)
-            if (!user.getNickname().equals(request.getNickname()) &&
-                    userService.isNicknameExists(request.getNickname())) {
-                logger.warn("이미 사용 중인 닉네임: {}", request.getNickname());
-                return ResponseEntity.badRequest()
-                        .body(Map.of("success", false, "message", "이미 사용 중인 닉네임입니다."));
-            }
+            // 닉네임 중복 체크 제거 (중복 허용)
 
             // 닉네임 업데이트
             user.setNickname(request.getNickname());

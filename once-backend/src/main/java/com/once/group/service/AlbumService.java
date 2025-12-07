@@ -8,13 +8,16 @@ import com.once.group.repository.AlbumRepository;
 import com.once.group.repository.GroupRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AlbumService {
@@ -27,7 +30,7 @@ public class AlbumService {
     // ============================================================
     // 앨범 생성 + AI 카테고리 → group_activity_category 저장
     // ============================================================
-    public AlbumResponse createAlbum(Long groupId, String title, String description, String imageUrl) {
+    public AlbumResponse createAlbum(Long groupId, Long userId, String title, String description, String imageUrl) {
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));
@@ -35,7 +38,7 @@ public class AlbumService {
         // AI 이미지 분석 → 그룹 활동 기록만 남김
         String aiCategory = analyzeCategory(imageUrl);
         if (aiCategory != null) {
-            groupActivityCategoryService.recordCategory(groupId, 0L, aiCategory);
+            groupActivityCategoryService.recordCategory(groupId, userId, aiCategory);
         }
 
         Album album = Album.builder()
@@ -63,7 +66,7 @@ public class AlbumService {
     // ============================================================
     // 앨범 수정 (이미지 변경 시에만 그룹 활동 카테고리 기록)
     // ============================================================
-    public AlbumResponse updateAlbum(Long groupId, Long albumId,
+    public AlbumResponse updateAlbum(Long groupId, Long albumId, Long userId,
                                      String title, String description, String imageUrl) {
 
         Album album = albumRepository.findById(albumId)
@@ -82,7 +85,7 @@ public class AlbumService {
             String aiCategory = analyzeCategory(imageUrl);
 
             if (aiCategory != null) {
-                groupActivityCategoryService.recordCategory(groupId, 0L, aiCategory);
+                groupActivityCategoryService.recordCategory(groupId, userId, aiCategory);
             }
 
             album.setImageUrl(imageUrl);
@@ -130,5 +133,16 @@ public class AlbumService {
         res.setImageUrl(album.getImageUrl());
         res.setCreatedAt(album.getCreatedAt());
         return res;
+    }
+
+    // src/main/java/com/once/group/service/AlbumService.java
+
+    @Transactional
+    public void deleteAlbumByImageUrl(Long groupId, String imageUrl) {
+        Album album = albumRepository
+                .findByGroupIdAndImageUrl(groupId, imageUrl)
+                .orElseThrow(() -> new RuntimeException("해당 이미지 URL의 앨범을 찾을 수 없습니다."));
+
+        albumRepository.delete(album);
     }
 }

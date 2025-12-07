@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -51,5 +52,15 @@ public class AiController {
     @PostMapping("/recommend/group/{groupId}")
     public ResponseEntity<?> recommendByGroup(@PathVariable Long groupId) {
         return ResponseEntity.ok(aiService.recommendForGroup(groupId));
+    }
+
+    // 게시글 종합 분석 (이미지 URL + 텍스트 내용)
+    @PostMapping("/analyze/post")
+    public ResponseEntity<?> analyzePost(@RequestBody Map<String, Object> req) {
+        @SuppressWarnings("unchecked")
+        List<String> imageUrls = (List<String>) req.get("image_urls");
+        String content = (String) req.get("content");
+
+        return ResponseEntity.ok(aiService.analyzePost(imageUrls, content));
     }
 }

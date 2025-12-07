@@ -1,6 +1,10 @@
 package com.once.post.service;
 
 import com.once.ai.service.AiService;
+import com.once.group.domain.Album;
+import com.once.group.domain.Group;
+import com.once.group.repository.AlbumRepository;
+import com.once.group.repository.GroupRepository;
 import com.once.group.service.GroupActivityCategoryService;
 import com.once.meeting.domain.Meeting;
 import com.once.meeting.repository.MeetingRepository;
@@ -21,6 +25,7 @@ import com.once.user.domain.User;
 import com.once.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,10 +33,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PostService {
@@ -41,12 +48,15 @@ public class PostService {
     private final PostCommentRepository commentRepository;
     private final MeetingRepository meetingRepository;
     private final PostLikeRepository likeRepository;
+    private final AlbumRepository albumRepository;
+    private final GroupRepository groupRepository;
 
     private final ImageUploadService imageUploadService;
     private final UserRepository userRepository;
 
     private final AiService aiService;
     private final GroupActivityCategoryService groupActivityCategoryService;
+    private final PostAiAnalysisService postAiAnalysisService;
 
     // ============================================================
     // 게시글 생성
@@ -87,12 +97,14 @@ public class PostService {
         Post saved = postRepository.save(post);
 
         int idx = 0;
+        List<String> uploadedImageUrls = new ArrayList<>();
 
         if (files != null) {
             for (MultipartFile file : files) {
                 if (file != null && !file.isEmpty()) {
 
                     String uploadedUrl = imageUploadService.uploadImage(file);
+                    uploadedImageUrls.add(uploadedUrl);
 
                     String aiCategory = null;
                     try {
@@ -100,15 +112,38 @@ public class PostService {
                         aiCategory = aiResponse != null ? (String) aiResponse.get("category") : null;
 
                         if (aiCategory != null) {
+                            log.info("게시글 이미지 카테고리 저장: postId={}, userId={}, category={}", saved.getId(), userId, aiCategory);
                             groupActivityCategoryService.recordCategory(groupId, userId, aiCategory);
                         }
 
                     } catch (Exception ignored) {}
 
+                    // ✅ 피드 이미지를 앨범에도 저장
+                    try {
+                        Group group = groupRepository.findById(groupId).orElse(null);
+                        if (group != null) {
+                            Album album = Album.builder()
+                                    .group(group)
+                                    .title("피드에서 업로드")
+                                    .description(content != null && content.length() > 50
+                                            ? content.substring(0, 50) + "..."
+                                            : content)
+                                    .imageUrl(uploadedUrl)
+                                    .createdAt(LocalDateTime.now())
+                                    .build();
+                            albumRepository.save(album);
+                            log.info("피드 이미지를 앨범에 저장: groupId={}, imageUrl={}", groupId, uploadedUrl);
+                        }
+                    } catch (Exception e) {
+                        log.error("앨범 저장 실패: {}", e.getMessage());
+                        // 앨범 저장 실패해도 피드는 계속 생성
+                    }
+
                     PostImage img = PostImage.builder()
                             .postId(saved.getId())
                             .imageUrl(uploadedUrl)
                             .orderIndex(idx++)
+                            .aiCategory(aiCategory)
                             .build();
 
                     postImageRepository.save(img);

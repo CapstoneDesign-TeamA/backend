@@ -2,6 +2,7 @@ package com.once.group.controller;
 
 import com.once.auth.domain.CustomUserDetails;
 import com.once.group.service.ImageUploadService;
+import com.once.group.service.InviteService;
 import com.once.group.dto.*;
 import com.once.group.service.GroupService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class GroupController {
 
     private final GroupService groupService;
     private final ImageUploadService imageUploadService;
+    private final InviteService inviteService;
 
     // ======================
     // 그룹 생성
@@ -244,5 +246,65 @@ public class GroupController {
         result.put("data", null);
 
         return ResponseEntity.ok(result);
+    }
+
+    // ======================
+    // 초대 링크 생성
+    // ======================
+    @PostMapping("/{groupId}/invite")
+    public ResponseEntity<?> createInviteLink(@PathVariable Long groupId) {
+        try {
+            String token = inviteService.createInviteLink(groupId);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("token", token);
+            result.put("message", "초대 링크가 생성되었습니다.");
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ======================
+    // 초대 정보 조회
+    // ======================
+    @GetMapping("/invite/info")
+    public ResponseEntity<?> getInviteInfo(@RequestParam String token) {
+        try {
+            // 토큰으로 그룹 정보 조회
+            GroupInviteInfo info = inviteService.getInviteInfo(token);
+            return ResponseEntity.ok(info);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ======================
+    // 초대 수락
+    // ======================
+    @PostMapping("/invite/accept")
+    public ResponseEntity<?> acceptInvite(
+            @RequestParam String token,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        try {
+            // CustomUserDetails에서 User 객체 가져오기
+            com.once.user.domain.User user = new com.once.user.domain.User();
+            user.setId(userDetails.getId());
+            user.setEmail(userDetails.getUsername());
+
+            inviteService.acceptInvite(token, user);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "그룹에 성공적으로 가입되었습니다.");
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 }

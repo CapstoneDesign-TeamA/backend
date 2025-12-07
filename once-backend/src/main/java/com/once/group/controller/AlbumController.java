@@ -1,5 +1,6 @@
 package com.once.group.controller;
 
+import com.once.auth.domain.CustomUserDetails;
 import com.once.group.dto.AlbumResponse;
 import com.once.group.service.AlbumService;
 import com.once.group.service.AutoAlbumService;
@@ -7,6 +8,7 @@ import com.once.group.service.ImageUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,6 +36,7 @@ public class AlbumController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> createAlbum(
             @PathVariable Long groupId,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
             @RequestPart("file") MultipartFile file
@@ -46,8 +49,8 @@ public class AlbumController {
         // OCI 업로드
         String imageUrl = imageUploadService.uploadImage(file);
 
-        // 앨범 DB 저장 (AlbumService는 imageUrl을 받도록 구현)
-        AlbumResponse album = albumService.createAlbum(groupId, title, description, imageUrl);
+        // 앨범 DB 저장 (userId 전달)
+        AlbumResponse album = albumService.createAlbum(groupId, user.getId(), title, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "앨범이 등록되었습니다.");
@@ -75,6 +78,7 @@ public class AlbumController {
     public ResponseEntity<Map<String, Object>> updateAlbum(
             @PathVariable Long groupId,
             @PathVariable Long albumId,
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
             @RequestPart(value = "file", required = false) MultipartFile file
@@ -89,8 +93,8 @@ public class AlbumController {
             imageUrl = imageUploadService.uploadImage(file);
         }
 
-        // imageUrl 이 null이면 서비스에서 기존 이미지 유지하도록 처리
-        AlbumResponse updated = albumService.updateAlbum(groupId, albumId, title, description, imageUrl);
+        // userId 전달 추가
+        AlbumResponse updated = albumService.updateAlbum(groupId, albumId, user.getId(), title, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "앨범이 수정되었습니다.");
@@ -138,6 +142,19 @@ public class AlbumController {
         Map<String, Object> result = new HashMap<>();
         result.put("message", "모임 종료 후 앨범이 자동 생성되었습니다.");
         result.put("data", data);
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/by-url")
+    public ResponseEntity<Map<String, Object>> deleteAlbumByImageUrl(
+            @PathVariable Long groupId,
+            @RequestParam("imageUrl") String imageUrl
+    ) {
+        albumService.deleteAlbumByImageUrl(groupId, imageUrl);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "앨범이 삭제되었습니다.");
+        result.put("data", null);
         return ResponseEntity.ok(result);
     }
 }

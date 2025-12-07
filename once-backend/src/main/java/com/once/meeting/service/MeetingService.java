@@ -1,5 +1,6 @@
 package com.once.meeting.service;
 
+import com.once.calendar.repository.CalendarScheduleRepository;
 import com.once.group.repository.GroupMemberRepository;
 import com.once.meeting.domain.Meeting;
 import com.once.meeting.domain.MeetingParticipant;
@@ -9,10 +10,10 @@ import com.once.meeting.dto.MeetingUpdateRequest;
 import com.once.meeting.dto.MeetingResponse;
 import com.once.meeting.repository.MeetingParticipantRepository;
 import com.once.meeting.repository.MeetingRepository;
-import com.once.user.domain.User;
 import com.once.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +26,7 @@ public class MeetingService {
     private final MeetingParticipantRepository participantRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final CalendarScheduleRepository calendarScheduleRepository;
 
 
 
@@ -130,6 +132,7 @@ public class MeetingService {
     // ========================================
     // 모임 수정
     // ========================================
+    @Transactional
     public MeetingResponse updateMeeting(
             Long groupId,
             Long meetingId,
@@ -192,6 +195,7 @@ public class MeetingService {
     // ========================================
     // 모임 삭제
     // ========================================
+    @Transactional
     public void deleteMeeting(Long groupId, Long meetingId, Long userId) {
 
         Meeting meeting = meetingRepository.findById(meetingId)
@@ -204,6 +208,9 @@ public class MeetingService {
         if (!meeting.getCreatorId().equals(userId)) {
             throw new RuntimeException("삭제 권한이 없습니다.");
         }
+
+        // ✅ 모임과 연결된 캘린더 일정도 함께 삭제
+        calendarScheduleRepository.deleteByMeetingId(meetingId);
 
         participantRepository.deleteByMeetingId(meetingId);
         meetingRepository.delete(meeting);

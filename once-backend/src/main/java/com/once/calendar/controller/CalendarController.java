@@ -76,4 +76,24 @@ public class CalendarController {
         ScheduleDetailResponse response = calendarService.getScheduleDetails(scheduleId);
         return ResponseEntity.ok(response);
     }
+
+    // 그룹 멤버들의 개인 일정 조회 (그룹 캘린더용)
+    @GetMapping("/group/{groupId}/members")
+    public ResponseEntity<MonthlyScheduleResponse> getGroupMembersSchedules(
+            @PathVariable Long groupId,
+            @RequestParam(value = "year") Integer year,
+            @RequestParam(value = "month") Integer month) {
+
+        // year, month 유효성 검증
+        if (year == null || month == null) {
+            throw new IllegalArgumentException("year와 month는 필수 파라미터입니다.");
+        }
+
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("month는 1~12 사이의 값이어야 합니다.");
+        }
+
+        MonthlyScheduleResponse response = calendarService.getGroupMembersSchedules(groupId, year, month);
+        return ResponseEntity.ok(response);
+    }
 }

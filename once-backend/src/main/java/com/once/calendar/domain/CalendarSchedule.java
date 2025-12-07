@@ -27,6 +27,10 @@ public class CalendarSchedule {
     @Column(name = "group_id")
     private Long groupId;
 
+    // 모임과 연결된 일정인 경우 모임 ID
+    @Column(name = "meeting_id")
+    private Long meetingId;
+
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
@@ -46,6 +50,7 @@ public class CalendarSchedule {
     @Builder
     public CalendarSchedule(Long userId,
                             Long groupId,
+                            Long meetingId,
                             String title,
                             String memo,
                             LocalDateTime startDateTime,
@@ -53,6 +58,7 @@ public class CalendarSchedule {
                             ScheduleType type) {
         this.userId = userId;
         this.groupId = groupId;
+        this.meetingId = meetingId;
         this.title = title;
         this.memo = memo;
         this.startDateTime = startDateTime;

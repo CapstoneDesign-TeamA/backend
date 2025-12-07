@@ -27,6 +27,7 @@ public class InviteToken {
     private LocalDateTime expiredAt;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean used = false;
 
     @Column(nullable = false)

@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -105,7 +104,7 @@ public class CalendarService {
     }
 
     // ==========================================
-    // 월 일정 조회 (그룹 멤버 전체 일정 포함)
+    // 월 일정 조회 (본인의 개인 일정 + 그룹 일정만)
     // ==========================================
     public MonthlyScheduleResponse getMonthlySchedules(int year, int month) {
 
@@ -117,26 +116,20 @@ public class CalendarService {
                 .map(g -> g.getGroup().getId())
                 .toList();
 
-        if (groupIds.isEmpty()) {
-            return new MonthlyScheduleResponse(List.of());
-        }
-
-        // 이 그룹들에 속한 전체 멤버들의 userId 가져오기
-        List<Long> memberUserIds = groupIds.stream()
-                .flatMap(gid -> groupMemberRepository.findUserIdsByGroupId(gid).stream())
-                .distinct()
-                .collect(Collectors.toList());
-
         // 날짜 범위
         YearMonth ym = YearMonth.of(year, month);
         LocalDateTime start = ym.atDay(1).atStartOfDay();
         LocalDateTime end = ym.atEndOfMonth().atTime(23, 59, 59);
 
-        // 일정 조회
-        List<CalendarSchedule> schedules =
-                scheduleRepository.findAllSchedulesForGroupMembers(
-                        memberUserIds, groupIds, start, end
-                );
+        // 일정 조회 - 본인의 개인 일정 + 속한 그룹의 그룹 일정만
+        List<CalendarSchedule> schedules;
+        if (groupIds.isEmpty()) {
+            // 그룹이 없으면 본인 개인 일정만 조회
+            schedules = scheduleRepository.findPersonalSchedulesOnly(userId, start, end);
+        } else {
+            // 본인 개인 일정 + 그룹 일정 조회
+            schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, groupIds, start, end);
+        }
 
         List<ScheduleInfo> list = schedules.stream().map(s -> {
             User user = userRepository.findById(s.getUserId()).orElse(null);
@@ -157,7 +150,7 @@ public class CalendarService {
     }
 
     // ==========================================
-    // 특정 날짜 일정 조회
+    // 특정 날짜 일정 조회 (본인 개인 일정 + 그룹 일정만)
     // ==========================================
     public DailyScheduleResponse getDailySchedules(LocalDate date) {
 
@@ -168,22 +161,16 @@ public class CalendarService {
                 .map(g -> g.getGroup().getId())
                 .toList();
 
-        if (groupIds.isEmpty()) {
-            return new DailyScheduleResponse(List.of());
-        }
-
-        List<Long> memberUserIds = groupIds.stream()
-                .flatMap(gid -> groupMemberRepository.findUserIdsByGroupId(gid).stream())
-                .distinct()
-                .collect(Collectors.toList());
-
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.atTime(23, 59, 59);
 
-        List<CalendarSchedule> schedules =
-                scheduleRepository.findAllSchedulesForGroupMembers(
-                        memberUserIds, groupIds, start, end
-                );
+        // 일정 조회 - 본인의 개인 일정 + 속한 그룹의 그룹 일정만
+            List<CalendarSchedule> schedules;
+            if (groupIds.isEmpty()) {
+                schedules = scheduleRepository.findPersonalSchedulesOnly(userId, start, end);
+            } else {
+                schedules = scheduleRepository.findPersonalAndGroupSchedules(userId, groupIds, start, end);
+        }
 
         List<DailyScheduleInfo> list = schedules.stream().map(s -> {
             User user = userRepository.findById(s.getUserId()).orElse(null);
@@ -220,6 +207,57 @@ public class CalendarService {
                 s.getGroupId(),
                 user != null ? user.getUsername() : null
         );
+    }
+
+    // ==========================================
+    // 그룹 멤버들의 개인 일정 조회 (그룹 캘린더용)
+    // ==========================================
+    public MonthlyScheduleResponse getGroupMembersSchedules(Long groupId, int year, int month) {
+
+        Long userId = getUserIdFromAuth();
+
+        // 1. 권한 확인: 요청자가 해당 그룹의 멤버인지 확인
+        boolean isMember = groupMemberRepository
+                .findByGroupIdAndUserId(groupId, userId)
+                .isPresent();
+
+        if (!isMember) {
+            throw new RuntimeException("그룹 멤버만 조회할 수 있습니다.");
+        }
+
+        // 2. 그룹에 속한 모든 멤버의 userId 조회
+        List<Long> memberUserIds = groupMemberRepository.findUserIdsByGroupId(groupId);
+
+        if (memberUserIds.isEmpty()) {
+            return new MonthlyScheduleResponse(List.of());
+        }
+
+        // 3. 날짜 범위 설정
+        YearMonth ym = YearMonth.of(year, month);
+        LocalDateTime start = ym.atDay(1).atStartOfDay();
+        LocalDateTime end = ym.atEndOfMonth().atTime(23, 59, 59);
+
+        // 4. 그룹 멤버들의 개인 일정만 조회 (PERSONAL 타입)
+        List<CalendarSchedule> schedules = scheduleRepository
+                .findPersonalSchedulesByUserIds(memberUserIds, start, end);
+
+        // 5. 응답 DTO 생성
+        List<ScheduleInfo> list = schedules.stream().map(s -> {
+            User user = userRepository.findById(s.getUserId()).orElse(null);
+
+            return new ScheduleInfo(
+                    s.getScheduleId(),
+                    s.getTitle(),
+                    s.getStartDateTime(),
+                    s.getEndDateTime(),
+                    s.getType().name(),
+                    getScheduleColor(s.getType()),
+                    s.getUserId(),
+                    user != null ? (user.getNickname() != null ? user.getNickname() : user.getUsername()) : "알 수 없음"
+            );
+        }).toList();
+
+        return new MonthlyScheduleResponse(list);
     }
 
     private String getScheduleColor(ScheduleType type) {

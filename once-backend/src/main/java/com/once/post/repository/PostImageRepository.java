@@ -8,7 +8,10 @@ import java.util.List;
 
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
-    // 게시글별 이미지 조회
+    // 게시글별 이미지 조회 (정렬 없음)
+    List<PostImage> findByPostId(Long postId);
+
+    // 게시글별 이미지 조회 (orderIndex 순서대로)
     List<PostImage> findByPostIdOrderByOrderIndexAsc(Long postId);
 
     // 게시글 이미지 전체 삭제
