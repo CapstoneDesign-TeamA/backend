@@ -1,3 +1,11 @@
+/**
+ * File: CalendarGroupService.java
+ * Description:
+ *  - 그룹 멤버 일정 분석 서비스
+ *  - 날짜별 바쁜 인원 수 계산
+ *  - 그룹 멤버 전체의 월 단위 일정 조회
+ */
+
 package com.once.calendar.service;
 
 import com.once.calendar.domain.CalendarSchedule;
@@ -21,16 +29,11 @@ public class CalendarGroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
 
-    /**
-     * 날짜별 바쁜 인원 수 계산
-     */
+    // 날짜별 바쁜 인원 수 계산
     public Map<String, Integer> getBusyCountByDay(Long groupId, LocalDate start, LocalDate end) {
 
         List<Long> memberUserIds = groupMemberRepository.findUserIdsByGroupId(groupId);
-
-        if (memberUserIds.isEmpty()) {
-            return new HashMap<>();
-        }
+        if (memberUserIds.isEmpty()) return new HashMap<>();
 
         List<Long> groupIds = List.of(groupId);
 
@@ -47,6 +50,7 @@ public class CalendarGroupService {
             LocalDate sd = s.getStartDateTime().toLocalDate();
             LocalDate ed = s.getEndDateTime().toLocalDate();
 
+            // 일정 기간 동안 하루씩 증가하며 카운트
             for (LocalDate d = sd; !d.isAfter(ed); d = d.plusDays(1)) {
                 String key = d.toString();
                 busyCountMap.put(key, busyCountMap.getOrDefault(key, 0) + 1);
@@ -56,16 +60,10 @@ public class CalendarGroupService {
         return busyCountMap;
     }
 
-
-    /**
-     * 그룹 멤버들의 월 전체 일정 조회
-     * (개인 일정 + 그룹 일정 모두 포함)
-     */
-    public Map<String, Object> getMonthlySchedulesForGroupMembers(
-            Long groupId, int year, int month) {
+    // 그룹 멤버들의 월 단위 일정 조회
+    public Map<String, Object> getMonthlySchedulesForGroupMembers(Long groupId, int year, int month) {
 
         List<Long> memberUserIds = groupMemberRepository.findUserIdsByGroupId(groupId);
-
         if (memberUserIds.isEmpty()) {
             return Map.of("schedules", List.of());
         }

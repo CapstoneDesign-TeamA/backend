@@ -1,3 +1,9 @@
+/**
+ * UserService
+ * 사용자 생성, 프로필 관리, 관심사/약관 저장, 활동 로그 기록 기능을 처리하는 서비스 클래스
+ * 비즈니스 로직은 유지하고 주석 스타일만 통일함
+ */
+
 package com.once.user.service;
 
 import ch.qos.logback.classic.Logger;
@@ -29,27 +35,32 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // 이메일 존재 여부
     public boolean isEmailExists(String email) {
         return userMapper.findByEmail(email).isPresent();
     }
 
+    // 아이디 존재 여부
     public boolean isUsernameExists(String username) {
         return userMapper.findByUsername(username).isPresent();
     }
 
+    // 닉네임 존재 여부
     public boolean isNicknameExists(String nickname) {
         return userMapper.findByNickname(nickname).isPresent();
     }
 
+    // 사용자 조회
     public Optional<User> findById(Long id) {
         return userMapper.findById(id);
     }
 
+    // 회원가입 처리
     @Transactional
     public User createUser(SignupRequest signupRequest) {
         Logger logger = (Logger) LoggerFactory.getLogger(UserService.class);
 
-        // User 생성
+        // 사용자 기본 정보 생성
         User user = new User();
         user.setUsername(signupRequest.getUsername());
         user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
@@ -57,18 +68,19 @@ public class UserService {
         user.setNickname(signupRequest.getNickname());
 
         logger.info("회원가입 - 사용자 생성 시작: username={}, email={}, nickname={}",
-                    signupRequest.getUsername(), signupRequest.getEmail(), signupRequest.getNickname());
+                signupRequest.getUsername(), signupRequest.getEmail(), signupRequest.getNickname());
 
         userMapper.insertUser(user);
         logger.info("회원가입 - 사용자 DB 저장 완료: userId={}", user.getId());
 
-        // 관심사 저장 (null 체크 추가)
+        // 관심사 저장
         logger.info("회원가입 - 관심사 개수: {}",
-                    signupRequest.getInterests() != null ? signupRequest.getInterests().size() : 0);
+                signupRequest.getInterests() != null ? signupRequest.getInterests().size() : 0);
 
         if (signupRequest.getInterests() != null && !signupRequest.getInterests().isEmpty()) {
             logger.info("회원가입 - 관심사 목록: {}", signupRequest.getInterests());
             int savedCount = 0;
+
             for (String interest : signupRequest.getInterests()) {
                 if (interest != null && !interest.trim().isEmpty()) {
                     logger.info("회원가입 - 관심사 저장 중: userId={}, interest={}", user.getId(), interest.trim());
@@ -76,7 +88,9 @@ public class UserService {
                     savedCount++;
                 }
             }
+
             logger.info("회원가입 - 관심사 저장 완료: userId={}, 저장된 개수={}", user.getId(), savedCount);
+
         } else {
             logger.warn("회원가입 - 관심사가 비어있음: userId={}", user.getId());
         }
@@ -88,8 +102,9 @@ public class UserService {
         return user;
     }
 
+    // 약관 저장 처리
     private void saveTermsAgreements(Long userId, Boolean marketingAgreed) {
-        // 필수 약관 동의
+
         TermsAgreement serviceTerms = new TermsAgreement();
         serviceTerms.setUserId(userId);
         serviceTerms.setTermType("SERVICE_TERMS");
@@ -106,7 +121,6 @@ public class UserService {
         privacyPolicy.setAgreedAt(LocalDateTime.now());
         userMapper.insertTermsAgreement(privacyPolicy);
 
-        // 선택 약관 동의 (마케팅)
         if (marketingAgreed != null && marketingAgreed) {
             TermsAgreement marketing = new TermsAgreement();
             marketing.setUserId(userId);
@@ -118,16 +132,18 @@ public class UserService {
         }
     }
 
+    // 이메일 기반 사용자 조회
     public User findByEmail(String email) {
         return userMapper.findByEmail(email).orElse(null);
     }
 
+    // 사용자 비활성화
     @Transactional
     public void deactivateUser(Long userId) {
         userMapper.deactivateUser(userId);
     }
 
-    // 프로필 조회
+    // 프로필 단일 조회
     public UserResponse getUserById(Long userId) {
         User user = userMapper.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다"));
@@ -146,15 +162,14 @@ public class UserService {
             Long userId,
             UserProfileUpdateRequest request
     ) {
+
         User user = userMapper.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다"));
 
-        // 이름 업데이트 (null이 아닌 경우)
         if (request.getName() != null) {
             user.setName(request.getName());
         }
 
-        // 프로필 이미지 업데이트 (null이 아닌 경우)
         if (request.getProfileImage() != null) {
             user.setProfileImage(request.getProfileImage());
         }
@@ -171,14 +186,14 @@ public class UserService {
                 .build();
     }
 
-    // 활동 로그 기록 메서드
+    // 활동 로그 기록
     @Transactional
     public void logUserActivity(Long user_id, String activity_type, String description) {
         Logger logger = (Logger) LoggerFactory.getLogger(UserService.class);
+
         try {
             String ipAddress = ClientInfoUtil.getClientIpAddress();
             String userAgent = ClientInfoUtil.getClientUserAgent();
-
 
             UserActivityLog log = new UserActivityLog();
             log.setUserId(user_id);
@@ -188,13 +203,11 @@ public class UserService {
             log.setUserAgent(userAgent);
             log.setCreatedAt(LocalDateTime.now());
 
-
             userMapper.insertUserActivityLog(log);
             logger.info("활동 로그 기록 완료: 사용자 ID={}, 활동 유형={}", user_id, activity_type);
+
         } catch (Exception e) {
             logger.error("활동 로그 기록 실패: {}", e.getMessage());
-            // 중요: 여기서 예외를 다시 던지지 않도록 주의
-            // 트랜잭션이 롤백되는 것을 방지하기 위해
         }
     }
 }

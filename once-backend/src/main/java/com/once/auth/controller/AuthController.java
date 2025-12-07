@@ -1,5 +1,14 @@
-// src/main/java/com/once/auth/controller/AuthController.java
+/**
+ * File: AuthController.java
+ * Description:
+ *  - 로그인 / 로그아웃 / 토큰 재발급 API
+ *  - 사용자 정보 반환
+ *  - 활동 로그 기록 처리
+ */
+
 package com.once.auth.controller;
+
+// src/main/java/com/once/auth/controller/AuthController.java
 
 import com.once.auth.domain.Token;
 import com.once.auth.dto.AuthResponse;
@@ -50,21 +59,16 @@ public class AuthController {
 
         userService.logUserActivity(user.getId(), "/auth/login", "로그인");
 
-
         Map<String, Object> response = new HashMap<>();
         response.put("access_token", accessToken);
         response.put("refresh_token", refreshToken);
         response.put("message", "로그인 성공");
 
-
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", user.getId());
-        // 실제 이름(name)이 있으면 그 값을 사용하고, 없으면 username을 fallback으로 사용
         userInfo.put("name", user.getName() != null && !user.getName().isEmpty() ? user.getName() : user.getUsername());
-        // 닉네임(nickname) 필드 추가
         userInfo.put("nickname", user.getNickname() != null ? user.getNickname() : "");
         userInfo.put("email", user.getEmail());
-        // 프로필 이미지 추가
         userInfo.put("profileImage", user.getProfileImage() != null ? user.getProfileImage() : "");
 
         response.put("user", userInfo);
@@ -81,7 +85,7 @@ public class AuthController {
         String refreshToken = request.get("refreshToken");
         authService.logout(refreshToken);
 
-        // userLog 가 null일 수도 있으니 방어 코드
+        // userLog가 null일 수도 있으니 방어 코드
         if (userLog != null) {
             userService.logUserActivity(userLog.getId(), "/auth/logout", "로그아웃");
         }
@@ -116,7 +120,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // 활동 로그 기록 (userLog 가 있을 때만)
+        // 활동 로그 기록
         if (userLog != null) {
             userService.logUserActivity(userLog.getId(), "/auth/refresh", "토큰 재발급");
         }
@@ -125,14 +129,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * ME (테스트용)
-     * 현재는 email/password 로 다시 인증해서,
-     * DB에 저장된 access/refresh 토큰을 찾아서 돌려주는 구조
-     *
-     * 요청: { "email": "...", "password": "..." }
-     * 응답: { "accessToken": "...", "refreshToken": "..." }
-     */
+
     @GetMapping("/me")
     public ResponseEntity<?> me(@Valid @RequestBody LoginRequest loginRequest) {
         User user = authService.authenticate(loginRequest);

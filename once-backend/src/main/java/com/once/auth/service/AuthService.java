@@ -1,3 +1,12 @@
+/**
+ * File: AuthService.java
+ * Description:
+ *  - 로그인 인증 처리
+ *  - Access/Refresh 토큰 생성 및 검증
+ *  - 토큰 갱신·삭제(MyBatis 연동)
+ *  - JWT payload 파싱(userId, email 등)
+ */
+
 package com.once.auth.service;
 
 import com.once.auth.domain.Token;
@@ -33,6 +42,7 @@ public class AuthService {
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
 
+    // 생성자: 서비스, 매퍼, 비밀번호 인코더, JWT 설정값 주입
     public AuthService(
             UserService userService,
             AuthMapper authMapper,
@@ -47,11 +57,12 @@ public class AuthService {
         this.jwtExpiration = jwtExpiration;
     }
 
+    // JWT 서명 키 생성
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // 로그인 시 인증
+    // 로그인 인증
     public User authenticate(LoginRequest loginRequest) {
         User user = userService.findByEmail(loginRequest.getEmail());
         if (user != null && passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
@@ -60,7 +71,7 @@ public class AuthService {
         return null;
     }
 
-    // 액세스 토큰 생성
+    // Access Token 생성
     public String generateAccessToken(User user) {
         SecretKey key = getSigningKey();
 
@@ -68,7 +79,7 @@ public class AuthService {
         Date expiry = new Date(now.getTime() + jwtExpiration);
 
         return Jwts.builder()
-                .setSubject(user.getEmail())          // 이메일을 subject로 사용
+                .setSubject(user.getEmail()) // 이메일을 subject 로 저장
                 .claim("userId", user.getId())
                 .claim("username", user.getUsername())
                 .setIssuedAt(now)
@@ -77,11 +88,10 @@ public class AuthService {
                 .compact();
     }
 
-    // 토큰에서 userId 추출
+    // JWT → userId 추출
     public Long getUserIdFromToken(String token) {
         try {
             SecretKey key = getSigningKey();
-
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
@@ -96,7 +106,7 @@ public class AuthService {
         }
     }
 
-    // 리프레시 토큰 생성 + DB 저장
+    // Refresh Token 생성 + DB 저장
     public String generateRefreshToken(User user) {
         String accessToken = generateAccessToken(user);
         String refreshToken = UUID.randomUUID().toString();
@@ -115,12 +125,10 @@ public class AuthService {
     public boolean validateToken(String token) {
         try {
             SecretKey key = getSigningKey();
-
             Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token);
-
             return true;
         } catch (Exception e) {
             logger.error("JWT validation error: {}", e.getMessage());
@@ -128,27 +136,25 @@ public class AuthService {
         }
     }
 
-    // 토큰에서 이메일(subject) 추출
+    // JWT → 이메일(subject) 추출
     public String getUsernameFromToken(String token) {
         try {
             SecretKey key = getSigningKey();
-
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
 
-            String subject = claims.getSubject();
-            logger.debug("Parsed subject(email) from JWT = {}", subject);
-            return subject;
+            return claims.getSubject();
+
         } catch (Exception e) {
             logger.error("JWT parsing error: {}", e.getMessage());
             return null;
         }
     }
 
-    // 리프레시 토큰 유효성 검증
+    // Refresh Token 유효성 검사
     public boolean validateRefreshToken(String refreshToken) {
         Token token = authMapper.findByRefreshToken(refreshToken).orElse(null);
         if (token == null) return false;
@@ -156,12 +162,12 @@ public class AuthService {
         return token.getExpiryDate().isAfter(LocalDateTime.now());
     }
 
-    // 로그아웃: 리프레시 토큰 삭제
+    // 로그아웃 → Refresh Token 삭제
     public void logout(@NotBlank String refreshToken) {
         authMapper.deleteToken(refreshToken);
     }
 
-    // 리프레시 토큰으로 새 액세스 토큰 발급
+    // Refresh Token으로 Access Token 재발급
     public String refreshAccessToken(String refreshToken) {
         Token token = authMapper.findByRefreshToken(refreshToken).orElse(null);
         if (token == null || token.getExpiryDate().isBefore(LocalDateTime.now())) {
@@ -169,9 +175,7 @@ public class AuthService {
         }
 
         User user = userService.findById(token.getUserId()).orElse(null);
-        if (user == null) {
-            return null;
-        }
+        if (user == null) return null;
 
         String newAccessToken = generateAccessToken(user);
 
@@ -185,10 +189,12 @@ public class AuthService {
         return newAccessToken;
     }
 
+    // userId로 토큰 조회
     public Token findTokenByUserId(Long id) {
         return authMapper.findTokenByUserId(id).orElse(null);
     }
 
+    // 이메일 → userId 조회
     public long findByEmail(String email) {
         return authMapper.findByEmail(email);
     }

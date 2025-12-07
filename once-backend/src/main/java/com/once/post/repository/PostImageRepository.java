@@ -1,3 +1,10 @@
+/**
+ * File: PostImageRepository.java
+ * Description:
+ *  - 게시글 이미지 관련 JPA Repository
+ *  - 이미지 조회, 삭제, AI 카테고리 조회 기능 제공
+ */
+
 package com.once.post.repository;
 
 import com.once.post.domain.PostImage;
@@ -8,16 +15,16 @@ import java.util.List;
 
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
-    // 게시글별 이미지 조회 (정렬 없음)
+    // 게시글별 이미지 조회
     List<PostImage> findByPostId(Long postId);
 
-    // 게시글별 이미지 조회 (orderIndex 순서대로)
+    // 게시글별 이미지 조회 (orderIndex 기준 정렬)
     List<PostImage> findByPostIdOrderByOrderIndexAsc(Long postId);
 
-    // 게시글 이미지 전체 삭제
+    // 게시글의 이미지 전체 삭제
     void deleteByPostId(Long postId);
 
-    // 그룹 전체 이미지의 AI 카테고리를 가져오기 위한 새로운 쿼리
+    // 특정 그룹에 속한 게시글들의 AI 이미지 카테고리 조회
     @Query("""
         SELECT pi.aiCategory
         FROM PostImage pi

@@ -1,3 +1,10 @@
+/**
+ * File: JwtAuthenticationFilter.java
+ * Description:
+ *  - JWT 인증 필터
+ *  - 필요 URL 제외 후 JWT 검증 및 SecurityContext 인증 처리
+ */
+
 package com.once.config;
 
 import com.once.auth.service.AuthService;
@@ -25,16 +32,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthService authService;
     private final CustomUserDetailsService userDetailsService;
 
+    // 인증이 필요하지 않은 URL 판단
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-
         String path = request.getRequestURI();
 
-        // 인증 안 필요한 URL
         if (path.startsWith("/auth")) return true;
         if (path.equals("/error")) return true;
 
-        // 그룹 상세 조회 GET → 공개
         if (request.getMethod().equals("GET") && path.matches("^/groups/\\d+$")) {
             return true;
         }
@@ -42,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return false;
     }
 
-
+    // JWT 검증 및 SecurityContext 인증 설정
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -56,18 +61,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String token = authHeader.substring(7);
 
-            // 토큰 유효성 검사
             if (authService.validateToken(token)) {
 
-                // 토큰에서 username(email) 추출
                 String username = authService.getUsernameFromToken(token);
                 log.info(">>> JWT username = {}", username);
 
-                // DB에서 UserDetails 조회
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 log.info(">>> userDetails id = {}", ((CustomUserDetails) userDetails).getId());
 
-                // 인증 객체 생성
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
@@ -75,9 +76,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 userDetails.getAuthorities()
                         );
 
-                // SecurityContext 에 저장
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-
                 log.info(">>> Authentication set!");
             }
         }

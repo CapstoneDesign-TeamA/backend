@@ -1,16 +1,24 @@
+/**
+ * File: TermsAgreement.java
+ * Description:
+ *  - 사용자의 약관 동의 정보를 저장하는 도메인 모델
+ *  - 동의 종류, 동의 여부, 동의 버전, 동의 시각을 기록함
+ */
+
 package com.once.user.domain;
 
 import java.time.LocalDateTime;
 
 public class TermsAgreement {
+
     private Long id;
     private Long userId;
-    private String termType;
-    private Boolean agreed;
-    private String agreedVersion;
-    private LocalDateTime agreedAt;
+    private String termType;        // 약관 종류 (예: SERVICE, PRIVACY)
+    private Boolean agreed;         // 동의 여부
+    private String agreedVersion;   // 약관 버전
+    private LocalDateTime agreedAt; // 동의 일시
 
-    // Getters and Setters
+    // getter/setter
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

@@ -1,23 +1,38 @@
+/**
+ * File: Token.java
+ * Description:
+ *  - 사용자 토큰 저장 도메인
+ *  - access/refresh 토큰 및 만료일 관리
+ */
+
 package com.once.auth.domain;
-
-
 
 import java.time.LocalDateTime;
 
-
 public class Token {
-    // Getters and Setters
+
+    // 토큰 PK
     private Long id;
+
+    // 사용자 ID
     private Long user_id;
+
+    // 리프레시 토큰
     private String refresh_token;
+
+    // 액세스 토큰
     private String access_token;
+
+    // 토큰 만료일
     private LocalDateTime expiry_date;
+
+    // 생성일
     private LocalDateTime created_at;
 
-    // 默认构造函数
+    // 기본 생성자
     public Token() {}
 
-    // 带参数的构造函数
+    // 토큰 생성자 (userId + 토큰 정보)
     public Token(Long userId, String refreshToken, String accessToken, LocalDateTime expiryDate) {
         this.user_id = userId;
         this.refresh_token = refreshToken;
@@ -25,8 +40,7 @@ public class Token {
         this.access_token = accessToken;
     }
 
-    // Getters and Setters
-
+    // getter/setter
     public Long getId() {
         return id;
     }
@@ -74,5 +88,4 @@ public class Token {
     public void setCreated_at(LocalDateTime created_at) {
         this.created_at = created_at;
     }
-
 }

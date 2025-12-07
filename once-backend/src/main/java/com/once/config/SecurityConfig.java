@@ -1,3 +1,10 @@
+/**
+ * File: SecurityConfig.java
+ * Description:
+ *  - Spring Security 설정
+ *  - CORS, JWT 필터, 인증/인가 규칙 정의
+ */
+
 package com.once.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +36,13 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    // 비밀번호 암호화 설정
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // Spring Security HTTP 설정
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
@@ -48,13 +57,13 @@ public class SecurityConfig {
                         .requestMatchers("/test/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // 그룹 상세 조회는 공개 허용
+                        // 그룹 상세 조회(GET)은 공개
                         .requestMatchers(HttpMethod.GET, "/groups/*").permitAll()
 
                         // 내 그룹 목록은 인증 필요
                         .requestMatchers(HttpMethod.GET, "/groups/my").authenticated()
 
-                        // 일정 조회도 인증 필요
+                        // 일정 조회 인증 필요
                         .requestMatchers(HttpMethod.GET, "/groups/*/schedules").authenticated()
 
                         .anyRequest().authenticated()
@@ -65,6 +74,7 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // CORS 정책 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 

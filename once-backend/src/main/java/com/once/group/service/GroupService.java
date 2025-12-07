@@ -1,3 +1,12 @@
+/**
+ * File: GroupService.java
+ * Description:
+ *  - 그룹 생성, 조회, 수정, 삭제 기능 제공
+ *  - 그룹 멤버 관리(가입/탈퇴/리더 권한 확인)
+ *  - 일정 및 앨범 조회 연동
+ *  - 초대 기능의 기본 흐름 처리
+ */
+
 package com.once.group.service;
 
 import com.once.auth.util.SecurityUtil;
@@ -28,7 +37,7 @@ public class GroupService {
     private final ScheduleRepository scheduleRepository;
     private final AlbumRepository albumRepository;
     private final GroupMemberRepository groupMemberRepository;
-    private final UserRepository userRepository;  // ★ 추가됨
+    private final UserRepository userRepository;
 
     // 그룹 생성
     public GroupResponse createGroup(String name, String description, String imageUrl) {
@@ -45,6 +54,7 @@ public class GroupService {
 
         Group saved = groupRepository.save(group);
 
+        // 생성자는 자동으로 그룹 리더가 됨
         GroupMember leader = new GroupMember();
         leader.setGroup(saved);
         leader.setUserId(userId);
@@ -75,13 +85,9 @@ public class GroupService {
                 .collect(Collectors.toList());
     }
 
-
-
-    // 사용자 기준 그룹 요약 조회
-
+    // 그룹 요약 조회
     public List<GroupSummaryResponse> getMyGroupsSummary() {
         Long userId = SecurityUtil.getCurrentUserId();
-
         List<GroupMember> members = groupMemberRepository.findByUserId(userId);
 
         return members.stream()
@@ -91,13 +97,13 @@ public class GroupService {
                     dto.setGroupId(g.getId());
                     dto.setName(g.getName());
                     dto.setMemberCount((int) groupMemberRepository.countByGroupId(g.getId()));
-                    dto.setLastActive("2025-09-26"); // TODO: 추후 실제 활동 기반 계산
+                    dto.setLastActive("2025-09-26"); // TODO: 추후 실제 기준으로 변경
                     return dto;
                 })
                 .collect(Collectors.toList());
     }
 
-    // 그룹 상세 조회 (전체)
+    // 그룹 상세 조회
     public GroupDetailResponse getGroupDetail(Long groupId) {
 
         Group group = groupRepository.findById(groupId)
@@ -109,20 +115,19 @@ public class GroupService {
         dto.setDescription(group.getDescription());
         dto.setImageUrl(group.getImageUrl());
 
-        // ★ 실제 구성원 로드
+        // 구성원 조회
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-
         List<String> memberNames = members.stream()
                 .map(member ->
                         userRepository.findById(member.getUserId())
-                                .map(User::getNickname)  // 닉네임
+                                .map(User::getNickname)
                                 .orElse("Unknown-" + member.getUserId())
                 )
                 .toList();
 
         dto.setMembers(memberNames);
 
-        // 일정 목록
+        // 일정 조회
         List<ScheduleResponse> schedules = scheduleRepository.findByGroupId(groupId)
                 .stream()
                 .map(schedule -> {
@@ -140,7 +145,7 @@ public class GroupService {
 
         dto.setSchedules(schedules);
 
-        // 앨범 목록
+        // 앨범 이미지 URL 목록 조회
         List<String> albumUrls = albumRepository.findByGroupId(groupId)
                 .stream()
                 .map(Album::getImageUrl)
@@ -172,12 +177,14 @@ public class GroupService {
                 .findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("그룹에 속해있지 않음"));
 
+        // 리더는 탈퇴할 수 없음
         if (member.getRole() == GroupRole.LEADER) {
             throw new IllegalArgumentException("그룹장은 그룹에서 나갈 수 없습니다.");
         }
 
         groupMemberRepository.delete(member);
 
+        // 구성원이 아무도 없으면 그룹 삭제
         if (groupMemberRepository.findByGroupId(groupId).isEmpty()) {
             groupRepository.deleteById(groupId);
         }
@@ -190,6 +197,7 @@ public class GroupService {
                 .findByGroupIdAndUserId(groupId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("그룹에 속해있지 않음"));
 
+        // 리더만 삭제 가능
         if (leader.getRole() != GroupRole.LEADER) {
             throw new IllegalArgumentException("그룹 삭제 권한이 없습니다.");
         }
@@ -198,7 +206,7 @@ public class GroupService {
         groupRepository.deleteById(groupId);
     }
 
-    // 공통 mapper
+    // 그룹 Response 변환
     private GroupResponse toResponse(Group group) {
         GroupResponse response = new GroupResponse();
         response.setGroupId(group.getId());
@@ -209,7 +217,7 @@ public class GroupService {
         return response;
     }
 
-    // 멤버 초대 (추후 실제 초대 로직 필요)
+    // 멤버 초대(기본 응답)
     public GroupInviteResponse inviteMember(GroupInviteRequest request) {
         Group group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 그룹입니다."));

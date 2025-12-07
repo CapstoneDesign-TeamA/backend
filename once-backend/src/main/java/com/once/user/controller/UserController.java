@@ -1,4 +1,10 @@
-// ================== 수정 완료된 전체 코드 ==================
+/**
+ * File: UserController.java
+ * Description:
+ *  - 회원가입, 로그인 기반 프로필 조회 및 수정 기능을 제공
+ *  - 이메일/아이디/닉네임 중복 검사 및 관심사 관리 기능 포함
+ *  - JWT 기반 사용자 인증을 활용하여 사용자 정보 접근을 처리
+ */
 
 package com.once.user.controller;
 
@@ -44,21 +50,21 @@ public class UserController {
         this.userMapper = userMapper;
     }
 
-    // ================= 회원가입 =================
+    // 회원가입
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest signupRequest) {
         try {
+            // 이메일 중복 검사
             if (userService.isEmailExists(signupRequest.getEmail())) {
                 return ResponseEntity.badRequest().body(Map.of("message", "이미 사용 중인 이메일입니다."));
             }
+            // 아이디 중복 검사
             if (userService.isUsernameExists(signupRequest.getUsername())) {
                 return ResponseEntity.badRequest().body(Map.of("message", "이미 사용 중인 아이디입니다."));
             }
-            // 닉네임 중복 체크 제거 - 중복 허용
-            // if (userService.isNicknameExists(signupRequest.getNickname())) {
-            //     return ResponseEntity.badRequest().body(Map.of("message", "이미 사용 중인 닉네임입니다."));
-            // }
+            // 닉네임 중복 체크 제거 (중복 허용)
 
+            // 사용자 생성
             User user = userService.createUser(signupRequest);
             userService.logUserActivity(user.getId(), "/signup", "사용자 생성");
 
@@ -70,10 +76,11 @@ public class UserController {
         }
     }
 
-    // ================= 회원 탈퇴 =================
+    // 회원 탈퇴
     @DeleteMapping("/me")
     public ResponseEntity<?> withdrawUser(@RequestHeader("Authorization") String token) {
         try {
+            // 사용자 인증
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
             User user = userService.findByEmail(email);
             if (user == null) {
@@ -81,6 +88,7 @@ public class UserController {
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
             }
 
+            // 탈퇴 처리
             userService.deactivateUser(user.getId());
             userService.logUserActivity(user.getId(), "/users/me", "회원 탈퇴");
 
@@ -92,17 +100,19 @@ public class UserController {
         }
     }
 
-    // ================= 내 프로필 조회 (/me) =================
+    // 내 프로필 조회
     @GetMapping("/me")
     public ResponseEntity<?> getMyProfile(@RequestHeader("Authorization") String token) {
         try {
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
             User user = userService.findByEmail(email);
+
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "User not found", "message", "사용자를 찾을 수 없습니다."));
             }
 
+            // 응답 구성
             Map<String, Object> response = new HashMap<>();
             response.put("userId", user.getId());
             response.put("name", user.getName() != null ? user.getName() : "");
@@ -117,7 +127,7 @@ public class UserController {
         }
     }
 
-    // ================= 닉네임/이메일/아이디 중복 체크 =================
+    // 이메일 중복 검사
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmail(@RequestParam String email) {
         boolean exists = userService.isEmailExists(email);
@@ -127,6 +137,7 @@ public class UserController {
         ));
     }
 
+    // 아이디 중복 검사
     @GetMapping("/check-username")
     public ResponseEntity<?> checkUsername(@RequestParam String username) {
         boolean exists = userService.isUsernameExists(username);
@@ -136,6 +147,7 @@ public class UserController {
         ));
     }
 
+    // 닉네임 중복 검사
     @GetMapping("/check-nickname")
     public ResponseEntity<?> checkNickname(@RequestParam String nickname) {
         boolean exists = userService.isNicknameExists(nickname);
@@ -145,30 +157,29 @@ public class UserController {
         ));
     }
 
-    // ================= 전체 프로필 조회 (관심사 포함) =================
+    // 전체 프로필 조회
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
-            logger.info("프로필 조회 요청 - 토큰: {}", token.substring(0, Math.min(50, token.length())));
+            logger.info("프로필 조회 요청");
 
+            // 인증
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
-            logger.info("토큰에서 추출한 이메일: {}", email);
-
             User user = userService.findByEmail(email);
+
             if (user == null) {
-                logger.warn("사용자를 찾을 수 없음: email={}", email);
+                logger.warn("사용자를 찾을 수 없음");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
             }
 
-            logger.info("사용자 조회 성공: userId={}, nickname={}", user.getId(), user.getNickname());
-
+            // 관심사 조회
             List<String> interestList = userMapper.findInterestsByUserId(user.getId())
                     .stream()
                     .map(UserInterest::getInterest)
                     .toList();
 
-            // HashMap 사용 (null 값 허용)
+            // 응답 구성
             Map<String, Object> profile = new HashMap<>();
             profile.put("id", user.getId());
             profile.put("username", user.getUsername());
@@ -179,20 +190,16 @@ public class UserController {
             profile.put("interests", interestList);
             profile.put("createdAt", user.getCreatedAt());
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", profile);
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("success", true, "data", profile));
 
         } catch (Exception e) {
-            logger.error("프로필 조회 중 오류 발생", e);
+            logger.error("프로필 조회 중 오류", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "message", "인증에 실패했습니다."));
         }
     }
 
-    // ================= 프로필 수정 =================
+    // 프로필 수정
     @Transactional
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(
@@ -200,34 +207,30 @@ public class UserController {
             @Valid @RequestBody ProfileUpdateRequest request) {
 
         try {
-            logger.info("프로필 업데이트 요청: nickname={}", request.getNickname());
+            logger.info("프로필 업데이트 요청");
 
-            // 사용자 인증
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
             User user = userService.findByEmail(email);
 
             if (user == null) {
-                logger.warn("사용자를 찾을 수 없음: email={}", email);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
             }
 
-            // 닉네임 중복 체크 제거 (중복 허용)
-
-            // 닉네임 업데이트
+            // 닉네임 수정
             user.setNickname(request.getNickname());
 
-            // name 업데이트
+            // 이름 수정
             if (request.getName() != null) {
                 user.setName(request.getName());
             }
 
-            // profileImage 업데이트
+            // 이미지 수정
             if (request.getProfileImage() != null) {
                 user.setProfileImage(request.getProfileImage());
             }
 
-            // DB 업데이트
+            // DB 반영
             userMapper.updateUserProfile(user);
 
             // 관심사 업데이트
@@ -236,12 +239,9 @@ public class UserController {
                 userMapper.insertUserInterest(user.getId(), interest);
             }
 
-            // 활동 로그
-            userService.logUserActivity(user.getId(), "/users/profile", "프로필 정보 수정");
+            userService.logUserActivity(user.getId(), "/users/profile", "프로필 수정");
 
-            logger.info("프로필 업데이트 성공: userId={}", user.getId());
-
-            // 반환 JSON(HashMap 사용 — null 허용)
+            // 응답 구성
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "프로필 수정 완료");
@@ -255,26 +255,25 @@ public class UserController {
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
-            logger.error("프로필 업데이트 중 오류", e);
+            logger.error("프로필 수정 오류", e);
 
-            // 인증 오류만 401
             if (e.getMessage() != null && e.getMessage().contains("JWT")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("success", false, "message", "인증에 실패했습니다."));
             }
 
-            // 나머지는 서버 오류로 돌림
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "프로필 수정 중 오류가 발생했습니다."));
         }
     }
 
-    // ================= 관심사 조회 =================
+    // 관심사 조회
     @GetMapping("/interests")
     public ResponseEntity<?> getUserInterests(@RequestHeader("Authorization") String token) {
         try {
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
             User user = userService.findByEmail(email);
+
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
@@ -293,7 +292,7 @@ public class UserController {
         }
     }
 
-    // ================= 관심사 업데이트 =================
+    // 관심사 수정
     @PutMapping("/interests")
     public ResponseEntity<?> updateUserInterests(
             @RequestHeader("Authorization") String token,
@@ -302,11 +301,13 @@ public class UserController {
         try {
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
             User user = userService.findByEmail(email);
+
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));
             }
 
+            // 기존 관심사 삭제 및 재등록
             userMapper.deleteUserInterests(user.getId());
             for (String interest : request.getInterests()) {
                 userMapper.insertUserInterest(user.getId(), interest);
@@ -322,7 +323,7 @@ public class UserController {
         }
     }
 
-    // ================= 활동 로그 조회 =================
+    // 활동 로그 조회
     @GetMapping("/activity-logs")
     public ResponseEntity<?> getUserActivityLogs(
             @RequestHeader("Authorization") String token,
@@ -332,6 +333,7 @@ public class UserController {
         try {
             String email = authService.getUsernameFromToken(token.replace("Bearer ", ""));
             User user = userService.findByEmail(email);
+
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("success", false, "message", "사용자를 찾을 수 없습니다."));

@@ -1,10 +1,10 @@
 package com.once.group.controller;
 
 import com.once.auth.domain.CustomUserDetails;
-import com.once.group.service.ImageUploadService;
-import com.once.group.service.InviteService;
 import com.once.group.dto.*;
 import com.once.group.service.GroupService;
+import com.once.group.service.ImageUploadService;
+import com.once.group.service.InviteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +26,12 @@ public class GroupController {
     private final ImageUploadService imageUploadService;
     private final InviteService inviteService;
 
-    // ======================
-    // 그룹 생성
-    // ======================
+
+    /**
+     * 그룹 생성
+     * - 이미지 파일은 선택적 업로드
+     * - name, description, imageUrl 기반 생성
+     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> createGroup(
             @RequestPart("name") String name,
@@ -36,40 +39,33 @@ public class GroupController {
             @RequestPart(value = "file", required = false) MultipartFile file
     ) throws IOException {
 
-        if (description == null) {
-            description = "";
-        }
+        if (description == null) description = "";
 
-        // 대표 이미지 업로드
+        // 대표 이미지 업로드 처리
         String imageUrl = null;
         if (file != null && !file.isEmpty()) {
             imageUrl = imageUploadService.uploadImage(file);
         }
-        if (file == null) {
-            System.out.println("[DEBUG] createGroup: file is null");
-        } else {
-            System.out.println("[DEBUG] createGroup: file = " + file.getOriginalFilename() + ", size = " + file.getSize());
-        }
-        System.out.println("[DEBUG] createGroup: imageUrl = " + imageUrl);
 
-        // imageUrl 포함해서 서비스로 전달
         GroupResponse response = groupService.createGroup(name, description, imageUrl);
 
         Map<String, Object> data = new HashMap<>();
         data.put("groupId", response.getGroupId());
         data.put("name", response.getName());
         data.put("createdAt", response.getCreatedAt());
-        data.put("imageUrl", response.getImageUrl());   // 디버깅용으로 추가
+        data.put("imageUrl", response.getImageUrl());
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "그룹이 생성되었습니다.");
         result.put("data", data);
+
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 전체 그룹 목록 조회
-    // ======================
+
+    /**
+     * 전체 그룹 목록 조회
+     */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllGroups() {
         List<GroupResponse> groups = groupService.getAllGroups();
@@ -79,9 +75,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 내가 속한 그룹 조회
-    // ======================
+
+    /**
+     * 내가 속한 그룹 조회
+     */
     @GetMapping("/my")
     public ResponseEntity<Map<String, Object>> getMyGroups() {
         List<GroupResponse> groups = groupService.getMyGroups();
@@ -91,9 +88,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 그룹 상세 조회
-    // ======================
+
+    /**
+     * 그룹 상세 조회
+     */
     @GetMapping("/{groupId}")
     public ResponseEntity<Map<String, Object>> getGroupById(@PathVariable Long groupId) {
         GroupDetailResponse detail = groupService.getGroupDetail(groupId);
@@ -103,9 +101,12 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 그룹 수정
-    // ======================
+
+    /**
+     * 그룹 수정
+     * - 이미지 변경 시 file 업로드
+     * - imageUrl = null이면 기존 이미지 유지
+     */
     @PutMapping(value = "/{groupId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateGroup(
             @PathVariable Long groupId,
@@ -114,35 +115,32 @@ public class GroupController {
             @RequestPart(value = "file", required = false) MultipartFile file
     ) throws IOException {
 
-        if (description == null) {
-            description = "";
-        }
+        if (description == null) description = "";
 
         String imageUrl = null;
         if (file != null && !file.isEmpty()) {
             imageUrl = imageUploadService.uploadImage(file);
         }
 
-        // imageUrl == null 이면 기존 이미지 유지 (Service에서 null 체크 후만 set)
         GroupResponse response = groupService.updateGroup(groupId, name, description, imageUrl);
 
         Map<String, Object> result = new HashMap<>();
         result.put("message", "그룹 정보가 수정되었습니다.");
         result.put("data", response);
+
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 그룹 삭제
-    // ======================
+
+    /**
+     * 그룹 삭제
+     */
     @DeleteMapping("/{groupId}")
     public ResponseEntity<Map<String, Object>> deleteGroup(
             @PathVariable Long groupId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-
-        Long userId = user.getId();  // 로그인한 사용자 ID
-
+        Long userId = user.getId();
         groupService.deleteGroup(groupId, userId);
 
         Map<String, Object> result = new HashMap<>();
@@ -152,15 +150,15 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 그룹 나가기
-    // ======================
+
+    /**
+     * 그룹 나가기
+     */
     @PostMapping("/{groupId}/leave")
     public ResponseEntity<Map<String, Object>> leaveGroup(
             @PathVariable Long groupId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-
         Long userId = user.getId();
         groupService.leaveGroup(groupId, userId);
 
@@ -171,9 +169,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 그룹 초대
-    // ======================
+
+    /**
+     * 그룹 초대
+     */
     @PostMapping("/{groupId}/invites")
     public ResponseEntity<Map<String, Object>> inviteMember(
             @PathVariable Long groupId,
@@ -189,9 +188,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 일정 등록
-    // ======================
+
+    /**
+     * 그룹 일정 등록
+     */
     @PostMapping("/{groupId}/schedules")
     public ResponseEntity<Map<String, Object>> createSchedule(
             @PathVariable Long groupId,
@@ -206,7 +206,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // 일정 조회
+
+    /**
+     * 그룹 일정 조회
+     */
     @GetMapping("/{groupId}/schedules")
     public ResponseEntity<Map<String, Object>> getSchedulesByGroup(@PathVariable Long groupId) {
         List<ScheduleResponse> schedules = groupService.getSchedulesByGroup(groupId);
@@ -217,7 +220,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // 일정 수정
+
+    /**
+     * 그룹 일정 수정
+     */
     @PutMapping("/{groupId}/schedules/{scheduleId}")
     public ResponseEntity<Map<String, Object>> updateSchedule(
             @PathVariable Long groupId,
@@ -233,7 +239,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // 일정 삭제
+
+    /**
+     * 그룹 일정 삭제
+     */
     @DeleteMapping("/{groupId}/schedules/{scheduleId}")
     public ResponseEntity<Map<String, Object>> deleteSchedule(
             @PathVariable Long groupId,
@@ -248,9 +257,10 @@ public class GroupController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================
-    // 초대 링크 생성
-    // ======================
+
+    /**
+     * 초대 링크 생성
+     */
     @PostMapping("/{groupId}/invite")
     public ResponseEntity<?> createInviteLink(@PathVariable Long groupId) {
         try {
@@ -262,36 +272,34 @@ public class GroupController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    // ======================
-    // 초대 정보 조회
-    // ======================
+
+    /**
+     * 초대 정보 조회
+     */
     @GetMapping("/invite/info")
     public ResponseEntity<?> getInviteInfo(@RequestParam String token) {
         try {
-            // 토큰으로 그룹 정보 조회
             GroupInviteInfo info = inviteService.getInviteInfo(token);
             return ResponseEntity.ok(info);
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    // ======================
-    // 초대 수락
-    // ======================
+
+    /**
+     * 초대 수락
+     */
     @PostMapping("/invite/accept")
     public ResponseEntity<?> acceptInvite(
             @RequestParam String token,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         try {
-            // CustomUserDetails에서 User 객체 가져오기
             com.once.user.domain.User user = new com.once.user.domain.User();
             user.setId(userDetails.getId());
             user.setEmail(userDetails.getUsername());
@@ -303,8 +311,7 @@ public class GroupController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }

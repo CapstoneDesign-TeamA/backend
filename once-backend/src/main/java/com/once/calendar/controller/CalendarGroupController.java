@@ -1,3 +1,10 @@
+/**
+ * File: CalendarGroupController.java
+ * Description:
+ *  - 그룹 구성원 일정 기반 busy-count 조회
+ *  - 그룹 전체 구성원의 월별 일정 조회 API
+ */
+
 package com.once.calendar.controller;
 
 import com.once.calendar.service.CalendarGroupService;
@@ -16,34 +23,29 @@ public class CalendarGroupController {
 
     private final CalendarGroupService calendarGroupService;
 
-    /**
-     * 날짜별 그룹 멤버 busy-count 조회
-     * 예: /calendar/group/8/busy-count?startDate=2025-12-01&endDate=2025-12-31
-     */
+    // 날짜 범위별 그룹 멤버 busy-count 조회
     @GetMapping("/{groupId}/busy-count")
     public ResponseEntity<?> getBusyCount(
             @PathVariable Long groupId,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate
     ) {
-
         Map<String, Integer> busyCountByDay =
                 calendarGroupService.getBusyCountByDay(groupId, startDate, endDate);
 
         return ResponseEntity.ok(Map.of("busyCountByDay", busyCountByDay));
     }
 
-    /**
-     * 특정 월의 그룹 구성원 전체 일정 조회 (개인 + 그룹 일정 모두 포함)
-     * 예: /calendar/group/8/schedules?year=2025&month=12
-     */
+    // 그룹 멤버 전체 월별 일정 조회 (개인 + 그룹 일정 포함)
     @GetMapping("/{groupId}/schedules")
     public ResponseEntity<?> getGroupMemberSchedules(
             @PathVariable Long groupId,
             @RequestParam int year,
             @RequestParam int month
     ) {
-        var schedules = calendarGroupService.getMonthlySchedulesForGroupMembers(groupId, year, month);
+        var schedules =
+                calendarGroupService.getMonthlySchedulesForGroupMembers(groupId, year, month);
+
         return ResponseEntity.ok(schedules);
     }
 }

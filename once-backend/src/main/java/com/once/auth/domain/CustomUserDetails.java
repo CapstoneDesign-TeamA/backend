@@ -1,3 +1,11 @@
+/**
+ * File: CustomUserDetails.java
+ * Description:
+ *  - Spring Security UserDetails 구현체
+ *  - User 엔티티 기반 인증 정보 제공
+ *  - 이메일을 username으로 사용
+ */
+
 package com.once.auth.domain;
 
 import com.once.user.domain.User;
@@ -35,7 +43,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail(); // 이메일을 username으로 사용
+        return user.getEmail();
     }
 
     @Override
@@ -45,7 +53,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // 권한은 필요 없으므로 빈 리스트
+        return Collections.emptyList();
     }
 
     @Override

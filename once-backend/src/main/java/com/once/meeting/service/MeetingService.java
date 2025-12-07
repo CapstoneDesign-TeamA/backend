@@ -1,3 +1,11 @@
+/**
+ * File: MeetingService.java
+ * Description:
+ *  - 모임 생성, 조회, 수정, 삭제를 처리하는 서비스
+ *  - 참여자 목록 및 참여 상태 관리
+ *  - 모임과 연결된 캘린더 일정 삭제 연동 수행
+ */
+
 package com.once.meeting.service;
 
 import com.once.calendar.repository.CalendarScheduleRepository;
@@ -28,20 +36,14 @@ public class MeetingService {
     private final UserRepository userRepository;
     private final CalendarScheduleRepository calendarScheduleRepository;
 
-
-
-    // username 또는 nickname으로 이름 반환 (nickname 우선)
+    // 사용자 이름을 nickname → username 순으로 결정
     private String resolveName(Long userId) {
         return userRepository.findById(userId)
                 .map(u -> u.getNickname() != null ? u.getNickname() : u.getUsername())
                 .orElse("unknown");
     }
 
-
-
-    // ========================================
     // 모임 생성
-    // ========================================
     public MeetingResponse createMeeting(Long groupId, Long creatorId, MeetingCreateRequest req) {
 
         if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, creatorId)) {
@@ -69,7 +71,7 @@ public class MeetingService {
 
         Meeting saved = meetingRepository.save(meeting);
 
-        // 작성자는 자동 ACCEPTED
+        // 작성자는 자동으로 참여 상태 ACCEPTED
         participantRepository.save(
                 MeetingParticipant.builder()
                         .meetingId(saved.getId())
@@ -78,16 +80,15 @@ public class MeetingService {
                         .build()
         );
 
-        int count = participantRepository.countByMeetingIdAndStatus(saved.getId(), ParticipationStatus.ACCEPTED);
+        int count = participantRepository.countByMeetingIdAndStatus(
+                saved.getId(),
+                ParticipationStatus.ACCEPTED
+        );
 
         return MeetingResponse.from(saved, count, ParticipationStatus.ACCEPTED.name(), List.of(), List.of());
     }
 
-
-
-    // ========================================
-    // 모임 목록 조회 (참여자 이름 포함)
-    // ========================================
+    // 모임 목록 조회
     public List<MeetingResponse> getMeetings(Long groupId, Long userId) {
 
         List<Meeting> meetings = meetingRepository.findByGroupId(groupId);
@@ -100,7 +101,8 @@ public class MeetingService {
                             ParticipationStatus.ACCEPTED
                     );
 
-                    String myStatus = participantRepository.findByMeetingIdAndUserId(m.getId(), userId)
+                    String myStatus = participantRepository
+                            .findByMeetingIdAndUserId(m.getId(), userId)
                             .map(p -> p.getStatus().name())
                             .orElse(null);
 
@@ -127,26 +129,19 @@ public class MeetingService {
                 .toList();
     }
 
-
-
-    // ========================================
     // 모임 수정
-    // ========================================
     @Transactional
-    public MeetingResponse updateMeeting(
-            Long groupId,
-            Long meetingId,
-            Long userId,
-            MeetingUpdateRequest req
-    ) {
+    public MeetingResponse updateMeeting(Long groupId, Long meetingId, Long userId, MeetingUpdateRequest req) {
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new RuntimeException("모임을 찾을 수 없습니다."));
 
+        // 그룹 ID 검증
         if (!meeting.getGroupId().equals(groupId)) {
             throw new RuntimeException("그룹 정보가 일치하지 않습니다.");
         }
 
+        // 작성자만 수정 가능
         if (!meeting.getCreatorId().equals(userId)) {
             throw new RuntimeException("수정 권한이 없습니다.");
         }
@@ -159,6 +154,7 @@ public class MeetingService {
         if (end == null) end = start;
         if (!start.equals(end)) time = null;
 
+        // 필드 업데이트
         meeting.setTitle(req.getTitle());
         meeting.setDescription(req.getDescription());
         meeting.setStartDate(start);
@@ -190,26 +186,24 @@ public class MeetingService {
         return MeetingResponse.from(updated, count, myStatus, participants, declined);
     }
 
-
-
-    // ========================================
     // 모임 삭제
-    // ========================================
     @Transactional
     public void deleteMeeting(Long groupId, Long meetingId, Long userId) {
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new RuntimeException("모임을 찾을 수 없습니다."));
 
+        // 그룹 검증
         if (!meeting.getGroupId().equals(groupId)) {
             throw new RuntimeException("그룹 정보 불일치");
         }
 
+        // 작성자만 삭제 가능
         if (!meeting.getCreatorId().equals(userId)) {
             throw new RuntimeException("삭제 권한이 없습니다.");
         }
 
-        // ✅ 모임과 연결된 캘린더 일정도 함께 삭제
+        // 모임과 연결된 캘린더 일정도 함께 삭제
         calendarScheduleRepository.deleteByMeetingId(meetingId);
 
         participantRepository.deleteByMeetingId(meetingId);

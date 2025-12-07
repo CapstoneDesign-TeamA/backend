@@ -1,3 +1,13 @@
+/**
+ * File: AiController.java
+ * Description:
+ *  - 이미지 URL 분석
+ *  - 이미지 업로드 분석
+ *  - 카테고리 기반 분석/추천
+ *  - 그룹 기반 추천
+ *  - 게시글 종합 분석 (이미지 + 텍스트)
+ */
+
 package com.once.ai.controller;
 
 import com.once.ai.dto.AiCategoryRequest;

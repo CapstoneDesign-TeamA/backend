@@ -1,3 +1,10 @@
+/**
+ * File: PostCommentController.java
+ * Description:
+ *  - 게시글 댓글 조회, 생성, 수정, 삭제를 처리하는 컨트롤러
+ *  - 그룹 내 특정 게시글에 대한 댓글 작업 수행
+ */
+
 package com.once.post.controller;
 
 import com.once.auth.domain.CustomUserDetails;
@@ -21,9 +28,7 @@ public class PostCommentController {
 
     // 댓글 목록 조회
     @GetMapping
-    public ResponseEntity<List<CommentResponse>> getComments(
-            @PathVariable Long postId
-    ) {
+    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable Long postId) {
         return ResponseEntity.ok(commentService.getComments(postId));
     }
 

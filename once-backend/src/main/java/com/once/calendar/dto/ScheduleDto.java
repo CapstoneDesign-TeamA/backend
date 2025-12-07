@@ -1,3 +1,9 @@
+/**
+ * File: ScheduleDto.java
+ * Description:
+ *  - 일정 생성/수정/조회/상세/그룹 Free-Busy 등 모든 캘린더 DTO 모음
+ */
+
 package com.once.calendar.dto;
 
 import java.time.LocalDate;
@@ -6,30 +12,22 @@ import java.util.List;
 
 public class ScheduleDto {
 
-    // ===== 공통 응답 =====
+    // 공통 응답 메시지
     public static class GeneralResponse {
         private String message;
 
         public GeneralResponse() {}
-
-        public GeneralResponse(String message) {
-            this.message = message;
-        }
+        public GeneralResponse(String message) { this.message = message; }
 
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
     }
 
-    // =========================
-    // 1) 일정 생성 DTO
-    // =========================
+    // 일정 생성 요청
     public static class ScheduleCreateRequest {
-
         private Long groupId;
         private String title;
         private String memo;
-
-        // 문자열로 받는다. "2025-11-20T19:00:00"
         private String startDateTime;
         private String endDateTime;
 
@@ -51,12 +49,12 @@ public class ScheduleDto {
         public void setEndDateTime(String endDateTime) { this.endDateTime = endDateTime; }
     }
 
+    // 일정 생성 응답
     public static class ScheduleCreateResponse {
         private Long scheduleId;
         private String message;
 
         public ScheduleCreateResponse() {}
-
         public ScheduleCreateResponse(Long scheduleId, String message) {
             this.scheduleId = scheduleId;
             this.message = message;
@@ -69,11 +67,8 @@ public class ScheduleDto {
         public void setMessage(String message) { this.message = message; }
     }
 
-    // =========================
-    // 2) 일정 수정 DTO
-    // =========================
+    // 일정 수정 요청
     public static class ScheduleUpdateRequest {
-
         private String title;
         private String memo;
         private String startDateTime;
@@ -94,12 +89,12 @@ public class ScheduleDto {
         public void setEndDateTime(String endDateTime) { this.endDateTime = endDateTime; }
     }
 
+    // 일정 수정 응답
     public static class ScheduleUpdateResponse {
         private Long scheduleId;
         private String message;
 
         public ScheduleUpdateResponse() {}
-
         public ScheduleUpdateResponse(Long scheduleId, String message) {
             this.scheduleId = scheduleId;
             this.message = message;
@@ -112,9 +107,7 @@ public class ScheduleDto {
         public void setMessage(String message) { this.message = message; }
     }
 
-    // =========================
-    // 3) 월 조회 DTO
-    // =========================
+    // 월 일정 정보
     public static class ScheduleInfo {
         private Long scheduleId;
         private String title;
@@ -122,8 +115,6 @@ public class ScheduleDto {
         private LocalDateTime endDateTime;
         private String type;
         private String color;
-
-        // 추가된 필드
         private Long userId;
         private String userName;
 
@@ -174,11 +165,11 @@ public class ScheduleDto {
         public void setUserName(String userName) { this.userName = userName; }
     }
 
+    // 월 일정 응답
     public static class MonthlyScheduleResponse {
         private List<ScheduleInfo> schedules;
 
         public MonthlyScheduleResponse() {}
-
         public MonthlyScheduleResponse(List<ScheduleInfo> schedules) {
             this.schedules = schedules;
         }
@@ -187,17 +178,12 @@ public class ScheduleDto {
         public void setSchedules(List<ScheduleInfo> schedules) { this.schedules = schedules; }
     }
 
-    // =========================
-    // 4) 일 조회 DTO
-    // =========================
+    // 일 일정 정보
     public static class DailyScheduleInfo {
-
         private Long scheduleId;
         private String title;
         private LocalDateTime startDateTime;
         private LocalDateTime endDateTime;
-
-
         private Long userId;
         private String userName;
 
@@ -238,11 +224,11 @@ public class ScheduleDto {
         public void setUserName(String userName) { this.userName = userName; }
     }
 
+    // 일 일정 응답
     public static class DailyScheduleResponse {
         private List<DailyScheduleInfo> schedules;
 
         public DailyScheduleResponse() {}
-
         public DailyScheduleResponse(List<DailyScheduleInfo> schedules) {
             this.schedules = schedules;
         }
@@ -251,9 +237,7 @@ public class ScheduleDto {
         public void setSchedules(List<DailyScheduleInfo> schedules) { this.schedules = schedules; }
     }
 
-    // =========================
-    // 5) 상세 조회 DTO
-    // =========================
+    // 상세 조회 응답
     public static class ScheduleDetailResponse {
         private Long scheduleId;
         private String title;
@@ -266,9 +250,16 @@ public class ScheduleDto {
 
         public ScheduleDetailResponse() {}
 
-        public ScheduleDetailResponse(Long scheduleId, String title, String memo,
-                                      LocalDateTime startDateTime, LocalDateTime endDateTime,
-                                      String type, Long groupId, String groupName) {
+        public ScheduleDetailResponse(
+                Long scheduleId,
+                String title,
+                String memo,
+                LocalDateTime startDateTime,
+                LocalDateTime endDateTime,
+                String type,
+                Long groupId,
+                String groupName
+        ) {
             this.scheduleId = scheduleId;
             this.title = title;
             this.memo = memo;
@@ -304,15 +295,12 @@ public class ScheduleDto {
         public void setGroupName(String groupName) { this.groupName = groupName; }
     }
 
-    // =========================
-    // 6) 그룹 Free / Busy DTO
-    // =========================
+    // 가능 시간 범위 DTO
     public static class AvailableSlot {
         private LocalDateTime start;
         private LocalDateTime end;
 
         public AvailableSlot() {}
-
         public AvailableSlot(LocalDateTime start, LocalDateTime end) {
             this.start = start;
             this.end = end;
@@ -325,14 +313,13 @@ public class ScheduleDto {
         public void setEnd(LocalDateTime end) { this.end = end; }
     }
 
+    // 그룹 Free/Busy 응답
     public static class GroupFreeBusyResponse {
         private List<AvailableSlot> availableSlots;
         private List<LocalDate> allMembersFreeDays;
 
         public GroupFreeBusyResponse() {}
-
-        public GroupFreeBusyResponse(List<AvailableSlot> availableSlots,
-                                     List<LocalDate> allMembersFreeDays) {
+        public GroupFreeBusyResponse(List<AvailableSlot> availableSlots, List<LocalDate> allMembersFreeDays) {
             this.availableSlots = availableSlots;
             this.allMembersFreeDays = allMembersFreeDays;
         }
@@ -344,15 +331,12 @@ public class ScheduleDto {
         public void setAllMembersFreeDays(List<LocalDate> allMembersFreeDays) { this.allMembersFreeDays = allMembersFreeDays; }
     }
 
-    // =========================
-    // 7) 모임 불가 주 DTO
-    // =========================
+    // 주 단위 불가 정보 DTO
     public static class UnavailableWeek {
         private int weekOfMonth;
         private String reason;
 
         public UnavailableWeek() {}
-
         public UnavailableWeek(int weekOfMonth, String reason) {
             this.weekOfMonth = weekOfMonth;
             this.reason = reason;
@@ -365,11 +349,11 @@ public class ScheduleDto {
         public void setReason(String reason) { this.reason = reason; }
     }
 
+    // 불가 주 응답
     public static class UnavailableWeeksResponse {
         private List<UnavailableWeek> weeks;
 
         public UnavailableWeeksResponse() {}
-
         public UnavailableWeeksResponse(List<UnavailableWeek> weeks) {
             this.weeks = weeks;
         }

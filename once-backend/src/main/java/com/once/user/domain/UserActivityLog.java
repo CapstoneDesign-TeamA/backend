@@ -1,52 +1,36 @@
+/**
+ * UserActivityLog
+ * 사용자 활동 로그 정보를 저장하는 도메인 클래스
+ * - 로그인 / 회원가입 / 프로필 변경 등의 사용자 활동을 기록할 때 사용됨
+ * - MyBatis 매핑 기반으로 DB에 저장되며 Entity가 아니라 단순 데이터 객체(DTO) 역할을 수행함
+ */
+
 package com.once.user.domain;
 
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 
-//@Getter
-//@Setter
+@Getter
+@Setter
 public class UserActivityLog {
+
     private Long id;
-    private Long user_id;
-    private String activity_type;
-    private String description;
-    private String ip_address;
-    private String user_agent;
-    private LocalDateTime created_at;
+    private Long userId;          // 유저 ID
+    private String activityType;  // 활동 종류
+    private String description;   // 활동 설명
+    private String ipAddress;     // 요청 IP
+    private String userAgent;     // User-Agent
+    private LocalDateTime createdAt; // 로그 생성 시간
 
-
+    // 기본 생성자
     public UserActivityLog() {}
 
-    // 带参数的构造函数
-    public UserActivityLog(Long user_id, String activity_type, String description) {
-        this.user_id = user_id;
-        this.activity_type = activity_type;
+    // 필수 정보 생성자
+    public UserActivityLog(Long userId, String activityType, String description) {
+        this.userId = userId;
+        this.activityType = activityType;
         this.description = description;
-        this.created_at = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
-
-    // Getters and Setters
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public Long getUserId() { return user_id; }
-    public void setUserId(Long user_id) { this.user_id = user_id; }
-
-    public String getActivityType() { return activity_type; }
-    public void setActivityType(String activity_type) { this.activity_type = activity_type; }
-
-    public String getUserAgent() { return user_agent; }
-    public void setUserAgent(String user_agent) { this.user_agent = user_agent; }
-    public String getIpAddress() { return ip_address; }
-    public void setIpAddress(String ipAddress) { this.ip_address = ip_address; }
-
-    public void setCreatedAt(LocalDateTime created_at) { this.created_at = created_at; }
-    public LocalDateTime getcreatedAt(LocalDateTime created_at) { return created_at; }
-
-    public String getDescription() { return description; }
-
-    public void setDescription(String description) { this.description = description;}
 }

@@ -1,3 +1,13 @@
+/**
+ * Service: AiService.java
+ * Description:
+ *  - 이미지 URL 분석 요청
+ *  - 이미지 파일 분석 요청
+ *  - 활동 카테고리 분석
+ *  - 사용자/그룹 기반 추천
+ *  - 게시글 종합 분석 (이미지 + 텍스트)
+ */
+
 package com.once.ai.service;
 
 import com.once.group.repository.GroupActivityCategoryRepository;
@@ -62,7 +72,7 @@ public class AiService {
         List<String> categories = groupActivityCategoryRepository.findRecentCategories(groupId);
 
         Map<String, Object> body = Map.of(
-                "user_categories", categories,   // 필요 시 구분 가능
+                "user_categories", categories,
                 "group_categories", categories
         );
 

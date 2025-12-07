@@ -1,3 +1,9 @@
+/**
+ * File: AiImageUrlRequest.java
+ * Description:
+ *  - 단일 이미지 URL 전달 요청 DTO
+ */
+
 package com.once.ai.dto;
 
 import lombok.Getter;

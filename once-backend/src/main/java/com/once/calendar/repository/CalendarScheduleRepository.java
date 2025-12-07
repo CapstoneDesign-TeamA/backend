@@ -1,4 +1,11 @@
-// src/main/java/com/once/calendar/repository/CalendarScheduleRepository.java
+/**
+ * File: CalendarScheduleRepository.java
+ * Description:
+ *  - CalendarSchedule 엔티티 JPA Repository
+ *  - 개인 일정 / 그룹 일정 조회 쿼리 제공
+ *  - 그룹 멤버 전체 일정 조회 및 모임 삭제 시 일정 제거 기능 포함
+ */
+
 package com.once.calendar.repository;
 
 import com.once.calendar.domain.CalendarSchedule;
@@ -11,9 +18,7 @@ import java.util.List;
 
 public interface CalendarScheduleRepository extends JpaRepository<CalendarSchedule, Long> {
 
-    /**
-     * 본인의 개인 일정만 조회
-     */
+    // 개인 일정 조회
     @Query("SELECT s FROM CalendarSchedule s WHERE " +
             "s.userId = :userId AND s.type = 'PERSONAL' " +
             "AND (s.startDateTime <= :end AND s.endDateTime >= :start)")
@@ -23,11 +28,7 @@ public interface CalendarScheduleRepository extends JpaRepository<CalendarSchedu
             @Param("end") LocalDateTime end
     );
 
-    /**
-     * 본인의 개인 일정 + 본인이 속한 그룹의 그룹 일정 조회
-     * (개인 일정: s.userId = :userId AND type = PERSONAL)
-     * (그룹 일정: s.groupId IN :groupIds AND type = GROUP)
-     */
+    // 개인 일정 + 속한 그룹 일정 조회
     @Query("SELECT s FROM CalendarSchedule s WHERE " +
             "((s.userId = :userId AND s.type = 'PERSONAL') OR (s.groupId IN :groupIds AND s.type = 'GROUP')) " +
             "AND (s.startDateTime <= :end AND s.endDateTime >= :start)")
@@ -38,13 +39,7 @@ public interface CalendarScheduleRepository extends JpaRepository<CalendarSchedu
             @Param("end") LocalDateTime end
     );
 
-    /**
-     * 여러 사용자들의 개인 일정만 조회 (그룹 캘린더용)
-     * @param userIds 조회할 사용자 ID 목록
-     * @param start 시작 일시
-     * @param end 종료 일시
-     * @return 해당 사용자들의 개인 일정 목록
-     */
+    // 여러 사용자들의 개인 일정 조회 (그룹 캘린더)
     @Query("SELECT s FROM CalendarSchedule s WHERE " +
             "s.userId IN :userIds AND s.type = 'PERSONAL' " +
             "AND (s.startDateTime <= :end AND s.endDateTime >= :start) " +
@@ -55,16 +50,7 @@ public interface CalendarScheduleRepository extends JpaRepository<CalendarSchedu
             @Param("end") LocalDateTime end
     );
 
-    /**
-     * ★ 그룹 멤버 전체의 개인 일정 + 그룹 일정 모두 조회 (기존 기능 - 필요시 사용)
-     *
-     * memberUserIds  : 이 그룹(들)에 속한 모든 유저의 userId
-     * groupIds       : 현재 로그인 유저가 속한 그룹 ID들 전체
-     *
-     * 조회되는 일정:
-     * - 개인 일정  : (userId IN memberUserIds AND type = PERSONAL)
-     * - 그룹 일정  : (groupId IN groupIds AND type = GROUP)
-     */
+    // 그룹 멤버 전체 일정 조회 (개인 + 그룹)
     @Query("SELECT s FROM CalendarSchedule s WHERE " +
             "((s.userId IN :memberUserIds AND s.type = 'PERSONAL') " +
             " OR (s.groupId IN :groupIds AND s.type = 'GROUP')) " +
@@ -76,8 +62,6 @@ public interface CalendarScheduleRepository extends JpaRepository<CalendarSchedu
             @Param("end") LocalDateTime end
     );
 
-    /**
-     * 모임 ID로 연결된 캘린더 일정 삭제 (모임 삭제 시 사용)
-     */
+    // 모임 삭제 시 연결된 일정 제거
     void deleteByMeetingId(Long meetingId);
 }

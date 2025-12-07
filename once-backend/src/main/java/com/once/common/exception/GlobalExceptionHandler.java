@@ -1,3 +1,10 @@
+/**
+ * File: GlobalExceptionHandler.java
+ * Description:
+ *  - 전역 예외 처리
+ *  - DTO 검증 오류 및 일반 예외 공통 응답 처리
+ */
+
 package com.once.common.exception;
 
 import org.springframework.http.HttpStatus;
@@ -14,9 +21,10 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ✅ DTO 유효성 검증 실패
+    // DTO 검증 실패 처리
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException ex) {
+
         Map<String, Object> errors = new HashMap<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             errors.put(error.getField(), error.getDefaultMessage());
@@ -31,9 +39,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // ✅ 일반 예외 처리
+    // 일반 예외 처리
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception ex) {
+
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());

@@ -1,3 +1,11 @@
+/**
+ * File: MeetingParticipantController.java
+ * Description:
+ *  - 모임 참여 및 불참 처리
+ *  - 모임 참석자 목록 조회 기능 제공
+ *  - 로그인 사용자 기반 동작 수행
+ */
+
 package com.once.meeting.controller;
 
 import com.once.auth.domain.CustomUserDetails;
@@ -18,6 +26,7 @@ public class MeetingParticipantController {
 
     private final MeetingParticipantService participantService;
 
+    // 모임 참여 처리
     @PostMapping("/participate")
     public ResponseEntity<?> participate(
             @PathVariable Long groupId,
@@ -25,13 +34,10 @@ public class MeetingParticipantController {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         participantService.accept(groupId, meetingId, user.getId());
-
-        // ★ JSON 응답으로 변경
-        return ResponseEntity.ok(Map.of(
-                "message", "참여 완료"
-        ));
+        return ResponseEntity.ok(Map.of("message", "참여 완료"));
     }
 
+    // 모임 불참 처리
     @PostMapping("/decline")
     public ResponseEntity<?> decline(
             @PathVariable Long groupId,
@@ -39,13 +45,10 @@ public class MeetingParticipantController {
             @AuthenticationPrincipal CustomUserDetails user
     ) {
         participantService.decline(groupId, meetingId, user.getId());
-
-        // ★ JSON 응답으로 변경
-        return ResponseEntity.ok(Map.of(
-                "message", "불참 처리 완료"
-        ));
+        return ResponseEntity.ok(Map.of("message", "불참 처리 완료"));
     }
 
+    // 참석자 목록 조회
     @GetMapping("/participants")
     public ResponseEntity<List<ParticipantResponse>> getParticipants(
             @PathVariable Long groupId,

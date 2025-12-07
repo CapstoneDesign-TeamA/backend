@@ -1,3 +1,11 @@
+/**
+ * File: PostService.java
+ * Description:
+ *  - 게시글 생성, 조회, 수정, 삭제 및 좋아요 기능을 제공하는 서비스
+ *  - 이미지 업로드, AI 분석, 그룹 활동 카테고리 기록, 앨범 저장 등 부가 기능을 포함
+ *  - 모임 후기 게시글 검증, 댓글/좋아요/이미지 연계 삭제 처리 등 게시글 도메인 전체 로직을 담당
+ */
+
 package com.once.post.service;
 
 import com.once.ai.service.AiService;
@@ -33,10 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -50,17 +55,11 @@ public class PostService {
     private final PostLikeRepository likeRepository;
     private final AlbumRepository albumRepository;
     private final GroupRepository groupRepository;
-
     private final ImageUploadService imageUploadService;
     private final UserRepository userRepository;
-
     private final AiService aiService;
     private final GroupActivityCategoryService groupActivityCategoryService;
-    private final PostAiAnalysisService postAiAnalysisService;
-
-    // ============================================================
     // 게시글 생성
-    // ============================================================
     @Transactional
     public PostResponse createPost(
             Long groupId,
@@ -71,8 +70,8 @@ public class PostService {
             List<MultipartFile> files
     ) throws IOException {
 
+        // 모임 후기인 경우 일정 검증
         if (type.equals("MEETING_REVIEW")) {
-
             if (meetingId == null) throw new RuntimeException("meetingId가 필요합니다.");
 
             Meeting meeting = meetingRepository.findById(meetingId)
@@ -81,10 +80,12 @@ public class PostService {
             if (!meeting.getGroupId().equals(groupId))
                 throw new RuntimeException("해당 그룹의 모임이 아닙니다.");
 
+            // 종료된 일정인지 확인
             if (!meeting.getEndDate().isBefore(LocalDate.now()))
                 throw new RuntimeException("모임 종료 후에만 후기를 작성할 수 있습니다.");
         }
 
+        // 게시글 저장
         Post post = Post.builder()
                 .groupId(groupId)
                 .userId(userId)
@@ -96,6 +97,7 @@ public class PostService {
 
         Post saved = postRepository.save(post);
 
+        // 이미지 처리
         int idx = 0;
         List<String> uploadedImageUrls = new ArrayList<>();
 
@@ -106,22 +108,22 @@ public class PostService {
                     String uploadedUrl = imageUploadService.uploadImage(file);
                     uploadedImageUrls.add(uploadedUrl);
 
+                    // 이미지 AI 분석
                     String aiCategory = null;
                     try {
                         Map aiResponse = aiService.analyzeImageUrl(Map.of("image_url", uploadedUrl));
                         aiCategory = aiResponse != null ? (String) aiResponse.get("category") : null;
 
                         if (aiCategory != null) {
-                            log.info("게시글 이미지 카테고리 저장: postId={}, userId={}, category={}", saved.getId(), userId, aiCategory);
                             groupActivityCategoryService.recordCategory(groupId, userId, aiCategory);
                         }
-
                     } catch (Exception ignored) {}
 
-                    // ✅ 피드 이미지를 앨범에도 저장
+                    // 앨범 자동 저장
                     try {
                         Group group = groupRepository.findById(groupId).orElse(null);
                         if (group != null) {
+
                             Album album = Album.builder()
                                     .group(group)
                                     .title("피드에서 업로드")
@@ -132,13 +134,12 @@ public class PostService {
                                     .createdAt(LocalDateTime.now())
                                     .build();
                             albumRepository.save(album);
-                            log.info("피드 이미지를 앨범에 저장: groupId={}, imageUrl={}", groupId, uploadedUrl);
                         }
                     } catch (Exception e) {
                         log.error("앨범 저장 실패: {}", e.getMessage());
-                        // 앨범 저장 실패해도 피드는 계속 생성
                     }
 
+                    // 이미지 엔티티 저장
                     PostImage img = PostImage.builder()
                             .postId(saved.getId())
                             .imageUrl(uploadedUrl)
@@ -151,6 +152,7 @@ public class PostService {
             }
         }
 
+        // 응답 구성
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -162,10 +164,7 @@ public class PostService {
         return PostResponse.from(saved, user, imgs, likeCount, myLiked, commentCount);
     }
 
-
-    // ============================================================
     // 피드 조회
-    // ============================================================
     @Transactional(readOnly = true)
     public List<PostResponse> getFeed(Long groupId, Long userId) {
 
@@ -176,9 +175,7 @@ public class PostService {
             User postUser = userRepository.findById(post.getUserId())
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-            List<PostImage> imgs =
-                    postImageRepository.findByPostIdOrderByOrderIndexAsc(post.getId());
-
+            List<PostImage> imgs = postImageRepository.findByPostIdOrderByOrderIndexAsc(post.getId());
             int likeCount = likeRepository.countByPostId(post.getId());
             boolean myLiked = likeRepository.existsByPostIdAndUserId(post.getId(), userId);
             int commentCount = commentRepository.countByPostId(post.getId());
@@ -188,22 +185,22 @@ public class PostService {
         }).toList();
     }
 
-
-    // ============================================================
     // 게시글 삭제
-    // ============================================================
     @Transactional
     public void deletePost(Long groupId, Long postId, Long userId) {
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
+        // 그룹 매칭 검증
         if (!post.getGroupId().equals(groupId))
             throw new RuntimeException("해당 그룹의 게시글이 아닙니다.");
 
+        // 작성자 권한 검증
         if (!post.getUserId().equals(userId))
             throw new RuntimeException("삭제 권한이 없습니다.");
 
+        // 연관 엔티티 삭제
         commentRepository.deleteByPostId(postId);
         likeRepository.deleteByPostId(postId);
         postImageRepository.deleteByPostId(postId);
@@ -211,10 +208,7 @@ public class PostService {
         postRepository.delete(post);
     }
 
-
-    // ============================================================
-    // 게시글 수정 (★ newImages → AI 분석 + group_activity_category 저장 추가)
-    // ============================================================
+    // 게시글 수정
     @Transactional
     public PostResponse updatePost(
             Long groupId,
@@ -226,14 +220,18 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
 
+        // 그룹 검증
         if (!post.getGroupId().equals(groupId))
             throw new RuntimeException("해당 그룹의 게시글이 아닙니다.");
 
+        // 권한 검증
         if (!post.getUserId().equals(userId))
             throw new RuntimeException("수정 권한이 없습니다.");
 
+        // 본문 수정
         post.setContent(req.getContent());
 
+        // 기존 이미지 관리
         List<PostImage> existing = postImageRepository.findByPostIdOrderByOrderIndexAsc(postId);
 
         if (req.getKeepImageIds() == null || req.getKeepImageIds().isEmpty()) {
@@ -246,20 +244,17 @@ public class PostService {
             }
         }
 
+        // 남은 이미지 재정렬
         List<PostImage> remain = postImageRepository.findByPostIdOrderByOrderIndexAsc(postId);
-
         int idx = 0;
         for (PostImage img : remain) {
             img.setOrderIndex(idx++);
         }
 
-        // ============================================================
-        // ★ newImages 추가 시 AI 분석 로직 추가
-        // ============================================================
+        // 새로운 이미지 저장 + AI 분석
         if (req.getNewImages() != null) {
             for (String url : req.getNewImages()) {
 
-                // AI 카테고리 분석
                 try {
                     Map aiResponse = aiService.analyzeImageUrl(Map.of("image_url", url));
                     String aiCategory = aiResponse != null ? (String) aiResponse.get("category") : null;
@@ -269,7 +264,6 @@ public class PostService {
                     }
                 } catch (Exception ignored) {}
 
-                // 이미지 저장
                 PostImage img = PostImage.builder()
                         .postId(postId)
                         .imageUrl(url)
@@ -280,6 +274,7 @@ public class PostService {
             }
         }
 
+        // 응답 구성
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -288,15 +283,12 @@ public class PostService {
 
         int likeCount = likeRepository.countByPostId(postId);
         boolean myLiked = likeRepository.existsByPostIdAndUserId(postId, userId);
-        int commentCount = commentRepository.countByPostId(post.getId());
+        int commentCount = commentRepository.countByPostId(postId);
 
         return PostResponse.from(post, user, finalImgs, likeCount, myLiked, commentCount);
     }
 
-
-    // ============================================================
-    // 좋아요 토글 (★ user 객체를 요청자 userId 기준으로 변경)
-    // ============================================================
+    // 좋아요 토글
     @Transactional
     public PostResponse toggleLike(Long groupId, Long postId, Long userId) {
 
@@ -306,6 +298,7 @@ public class PostService {
         if (!post.getGroupId().equals(groupId))
             throw new RuntimeException("해당 그룹의 게시글이 아닙니다.");
 
+        // 토글 처리
         Optional<PostLike> existing = likeRepository.findByPostIdAndUserId(postId, userId);
 
         if (existing.isPresent()) {
@@ -319,18 +312,14 @@ public class PostService {
             );
         }
 
-        // ================================
-        // ★ user = 요청자 userId 로 변경됨
-        // ================================
+        // 응답 구성
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        List<PostImage> imgs =
-                postImageRepository.findByPostIdOrderByOrderIndexAsc(postId);
-
+        List<PostImage> imgs = postImageRepository.findByPostIdOrderByOrderIndexAsc(postId);
         int likeCount = likeRepository.countByPostId(postId);
         boolean myLiked = likeRepository.existsByPostIdAndUserId(postId, userId);
-        int commentCount = commentRepository.countByPostId(post.getId());
+        int commentCount = commentRepository.countByPostId(postId);
 
         return PostResponse.from(post, user, imgs, likeCount, myLiked, commentCount);
     }
